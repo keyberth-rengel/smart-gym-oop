@@ -1,9 +1,13 @@
 package com.smartgym.model;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class Customer {
     private final String email;
     private String name;
@@ -13,7 +17,7 @@ public class Customer {
 
     public Customer(String email, String name, int age) {
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("\n" + "Se requiere correo electrónico.");
+            throw new IllegalArgumentException("\n" + "Email required");
         }
         this.email = email.toLowerCase().trim();
         this.name = name;

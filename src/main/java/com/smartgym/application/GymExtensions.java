@@ -66,20 +66,26 @@ public class GymExtensions {
     public String accessByDni(String dni) {
         String key = normalize(dni);
         String email = dniToEmail.get(key);
-        if (email == null) return "No se encontró identidad para ese DNI.";
+        if (email == null) throw new IllegalArgumentException("DNI not linked");
 
-        var role = core.findCustomer(email).map(c -> AttendanceRecord.Role.CUSTOMER)
-                .or(() -> core.findTrainer(email).map(t -> AttendanceRecord.Role.TRAINER))
-                .orElse(null);
+        var roleOpt =
+                core.findCustomer(email).map(c -> AttendanceRecord.Role.CUSTOMER)
+                        .or(() -> core.findTrainer(email).map(t -> AttendanceRecord.Role.TRAINER));
 
-        if (role == null) return "El DNI existe pero no corresponde a cliente/entrenador registrado.";
+        if (roleOpt.isEmpty()) throw new IllegalArgumentException("Identity not recognized for the linked email");
+        var role = roleOpt.get();
 
-        attendance.add(new AttendanceRecord(email, role));
-        String name = role == AttendanceRecord.Role.CUSTOMER
-                ? core.findCustomer(email).map(Customer::getName).orElse("Cliente")
-                : core.findTrainer(email).map(Trainer::getName).orElse("Entrenador");
+        attendance.add(new AttendanceRecord(
+                email,
+                role,
+                java.time.LocalDateTime.now()
+        ));
 
-        return "¡Bienvenido/a " + name + "! Acceso registrado para " + email + ".";
+        String name = (role == AttendanceRecord.Role.CUSTOMER)
+                ? core.findCustomer(email).map(Customer::getName).orElse("Customer")
+                : core.findTrainer(email).map(Trainer::getName).orElse("Trainer");
+
+        return "Welcome " + name + "! Access recorded for " + email + ".";
     }
 
     public List<AttendanceRecord> attendanceByEmail(String email) {
@@ -92,19 +98,19 @@ public class GymExtensions {
     }
 
     public void addProgressByDni(String dni, double weightKg, double bodyFatPct, double musclePct) {
-        String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI no registrado."));
+        String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
         String key = normalize(email);
         progressByCustomer.computeIfAbsent(key, k -> new ArrayList<>())
                 .add(new ProgressRecord(LocalDate.now(), weightKg, bodyFatPct, musclePct));
     }
 
     public List<ProgressRecord> progressByDni(String dni) {
-        String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI no registrado."));
+        String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
         return progressByCustomer.getOrDefault(normalize(email), List.of());
     }
 
     private Map<DayOfWeek, String> randomWeeklyPlan() {
-        List<String> blocks = new ArrayList<>(List.of("Pierna", "Pecho", "Espalda", "Hombro", "Brazos", "Cardio"));
+        List<String> blocks = new ArrayList<>(List.of("Legs", "Chest", "Back", "Shoulders", "Arms", "Cardio"));
         Collections.shuffle(blocks);
         EnumMap<DayOfWeek, String> plan = new EnumMap<>(DayOfWeek.class);
         plan.put(DayOfWeek.MONDAY,    blocks.get(0));

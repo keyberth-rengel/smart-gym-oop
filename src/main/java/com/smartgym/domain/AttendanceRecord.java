@@ -9,7 +9,7 @@ public class AttendanceRecord {
     private final Role role;
     private final LocalDateTime timestamp;
 
-    public AttendanceRecord(String email, Role role) {
+    public AttendanceRecord(String email, Role role, LocalDateTime now) {
         this.email = email;
         this.role = role;
         this.timestamp = LocalDateTime.now();
