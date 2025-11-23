@@ -33,7 +33,7 @@ public class IdentityController {
         ext.registerCustomerIdentity(req.dni(), req.email());
         var payload = java.util.Map.of("dni", req.dni(), "email", req.email());
         return org.springframework.http.ResponseEntity.status(201).body(
-                com.smartgym.api.common.ApiResponse.ok(payload, "Customer ID linked successfully.",
+                com.smartgym.api.common.ApiResponse.ok(payload, "Customer ID linked successfully",
                         java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
@@ -48,7 +48,30 @@ public class IdentityController {
         ext.registerTrainerIdentity(req.dni(), req.email());
         var payload = java.util.Map.of("dni", req.dni(), "email", req.email());
         return org.springframework.http.ResponseEntity.status(201).body(
-                com.smartgym.api.common.ApiResponse.ok(payload, "Trainer ID linked successfully.",
+                com.smartgym.api.common.ApiResponse.ok(payload, "Trainer ID linked successfully",
+                        java.time.Instant.now().toString(), http.getRequestURI())
+        );
+    }
+
+    @Operation(summary = "Resolve identity by DNI")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "OK",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404", description = "Not linked",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @GetMapping("/{dni}")
+    public ResponseEntity<ApiResponse<?>> resolve(@PathVariable String dni, jakarta.servlet.http.HttpServletRequest http) {
+        var emailOpt = ext.emailByDni(dni);
+        if (emailOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(
+                    ApiResponse.fail("NOT_FOUND", "DNI not linked", null,
+                            java.time.Instant.now().toString(), http.getRequestURI())
+            );
+        }
+        var payload = java.util.Map.of("dni", dni, "email", emailOpt.get());
+        return ResponseEntity.ok(
+                ApiResponse.ok(payload, "Identity resolved successfully",
                         java.time.Instant.now().toString(), http.getRequestURI())
         );
     }

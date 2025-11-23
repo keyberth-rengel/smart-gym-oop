@@ -7,6 +7,7 @@ import com.smartgym.application.GymExtensions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -29,10 +30,11 @@ public class ProgressController {
             responseCode = "404", description = "DNI not linked",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> add(@RequestBody ProgressCreateRequest req,
+    public ResponseEntity<ApiResponse<?>> add(@Valid @RequestBody ProgressCreateRequest req,
                                               jakarta.servlet.http.HttpServletRequest http) {
-        ext.addProgressByDni(req.dni(), req.weightKg(), req.bodyFatPct(), req.musclePct());
-        var list = ext.progressByDni(req.dni());
+        validateRanges(req);
+        ext.addProgressByDni(req.getDni(), req.getWeightKg(), req.getBodyFatPct(), req.getMusclePct());
+        var list = ext.progressByDni(req.getDni());
         var last = list.isEmpty() ? null : list.get(list.size() - 1);
 
         var payload = (last == null) ? null : new com.smartgym.api.dto.ProgressItemResponse(
@@ -42,7 +44,7 @@ public class ProgressController {
         return org.springframework.http.ResponseEntity.status(201).body(
                 com.smartgym.api.common.ApiResponse.ok(
                         payload,
-                        "Progress record added successfully.",
+                        "Progress record added successfully",
                         java.time.Instant.now().toString(),
                         http.getRequestURI()
                 )
@@ -76,10 +78,25 @@ public class ProgressController {
         return org.springframework.http.ResponseEntity.ok(
                 com.smartgym.api.common.ApiResponse.ok(
                         payload,
-                        "Progress history retrieved successfully.",
+                        "Progress history retrieved successfully",
                         java.time.Instant.now().toString(),
                         http.getRequestURI()
                 )
         );
     }
+
+        /**
+         * Validación de rangos antes de acceder a la base para devolver 422 claros.
+         */
+        private void validateRanges(ProgressCreateRequest req) {
+                if (req.getWeightKg() == null || req.getWeightKg() <= 0 || req.getWeightKg() > 400) {
+                        throw new com.smartgym.api.advice.DomainValidationException("Weight must be between 0 and 400 kg.");
+                }
+                if (req.getBodyFatPct() == null || req.getBodyFatPct() < 0 || req.getBodyFatPct() > 100) {
+                        throw new com.smartgym.api.advice.DomainValidationException("Body fat percentage must be between 0 and 100.");
+                }
+                if (req.getMusclePct() == null || req.getMusclePct() < 0 || req.getMusclePct() > 100) {
+                        throw new com.smartgym.api.advice.DomainValidationException("Muscle percentage must be between 0 and 100.");
+                }
+        }
 }

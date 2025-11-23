@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -114,11 +115,29 @@ public class ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(DomainValidationException.class)
+    public ResponseEntity<ApiResponse<?>> handleDomainValidation(DomainValidationException ex,
+                                                                 HttpServletRequest req) {
+        return ResponseEntity.status(422).body(
+                ApiResponse.fail("UNPROCESSABLE_ENTITY", ex.getMessage(), null,
+                        Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<?>> handleIllegalState(IllegalStateException ex,
                                                              HttpServletRequest req) {
         return ResponseEntity.status(409).body(
                 ApiResponse.fail("CONFLICT", ex.getMessage(), null,
+                        Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<?>> handleDataIntegrity(DataIntegrityViolationException ex,
+                                                              HttpServletRequest req) {
+        return ResponseEntity.status(409).body(
+                ApiResponse.fail("CONFLICT", "Conflict with existing data", null,
                         Instant.now().toString(), req.getRequestURI())
         );
     }

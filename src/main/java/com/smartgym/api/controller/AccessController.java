@@ -32,7 +32,7 @@ public class AccessController {
     public ResponseEntity<ApiResponse<String>> access(@RequestBody AccessRequest req, HttpServletRequest http) {
         String msg = ext.accessByDni(req.dni());
         return ResponseEntity.ok(
-                ApiResponse.ok(msg, "Access registered successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(msg, "Access registered successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 
@@ -51,7 +51,7 @@ public class AccessController {
         }
         var list = ext.attendanceByEmail(emailOpt.get());
         return ResponseEntity.ok(
-                ApiResponse.ok(list, "Attendance records retrieved successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(list, "Attendance records retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 }

@@ -41,7 +41,7 @@ public class TrainerController {
         service.addTrainer(created);
         return org.springframework.http.ResponseEntity.status(201).body(
                 com.smartgym.api.common.ApiResponse.ok(
-                        created, "Trainer created successfully.", java.time.Instant.now().toString(), req.getRequestURI()
+                        created, "Trainer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
                 )
         );
     }
@@ -58,7 +58,7 @@ public class TrainerController {
         var t = service.findTrainer(email)
                 .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + email));
         return ResponseEntity.ok(
-                ApiResponse.ok(t, "Trainer retrieved successfully.", java.time.Instant.now().toString(), req.getRequestURI())
+                ApiResponse.ok(t, "Trainer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 }

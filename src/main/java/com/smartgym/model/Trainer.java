@@ -1,20 +1,37 @@
 package com.smartgym.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "trainers")
 public class Trainer {
-    private final String email;
+    @Id
+    @Column(nullable = false, length = 180)
+    private String email;
+
+    @Column(nullable = false, length = 120)
     private String name;
+
     private int age;
+
+    @Column(length = 160)
     private String specialty;
+
+    protected Trainer() {
+        // JPA
+    }
 
     public Trainer(String email, String name, int age, String specialty) {
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("\n" + "Se requiere correo electrónico.");
+            throw new IllegalArgumentException("Email is required.");
         }
-        this.email = email.toLowerCase().trim();
+        this.email = normalize(email);
         this.name = name;
         this.age = age;
         this.specialty = specialty;
     }
+
+    private String normalize(String e) { return e.toLowerCase().trim(); }
 
     public String getEmail() { return email; }
     public String getName() { return name; }

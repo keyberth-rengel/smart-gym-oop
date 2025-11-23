@@ -10,28 +10,31 @@ public class ApiResponse<T> {
     private final ApiError error;
     private final String timestamp;
     private final String path;
+    private final String requestId;
 
     public ApiResponse(boolean success,
                        T data,
                        String message,
                        ApiError error,
                        String timestamp,
-                       String path) {
+                       String path,
+                       String requestId) {
         this.success = success;
         this.data = data;
         this.message = message;
         this.error = error;
         this.timestamp = timestamp;
         this.path = path;
+        this.requestId = requestId;
     }
 
     public static <T> ApiResponse<T> ok(T data, String topMessage, String timestamp, String path) {
-        return new ApiResponse<>(true, data, topMessage, null, timestamp, path);
+        return new ApiResponse<>(true, data, topMessage, null, timestamp, path, RequestContext.getRequestId());
     }
 
     public static <T> ApiResponse<T> fail(String code, String topMessage, Object details,
                                           String timestamp, String path) {
-        return new ApiResponse<>(false, null, topMessage, new ApiError(code, details), timestamp, path);
+        return new ApiResponse<>(false, null, topMessage, new ApiError(code, details), timestamp, path, RequestContext.getRequestId());
     }
 
     public boolean isSuccess() {
@@ -57,4 +60,6 @@ public class ApiResponse<T> {
     public String getPath() {
         return path;
     }
+
+    public String getRequestId() { return requestId; }
 }

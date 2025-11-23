@@ -6,6 +6,7 @@ import com.smartgym.application.GymExtensions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class RoutineController {
             responseCode = "404", description = "DNI not linked",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping("/assign")
-    public ResponseEntity<ApiResponse<Map<?, ?>>> assign(@RequestBody RoutineAssignRequest req, HttpServletRequest http) {
+    public ResponseEntity<ApiResponse<Map<?, ?>>> assign(@Valid @RequestBody RoutineAssignRequest req, HttpServletRequest http) {
         var email = ext.emailByDni(req.dni()).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
         var r = ext.assignRandomRoutine(email);
         var planLower = r.getPlan().entrySet().stream()
@@ -41,7 +42,7 @@ public class RoutineController {
                         e -> e.getValue()
                 ));
         return ResponseEntity.status(201).body(
-                ApiResponse.ok(planLower, "Routine assigned successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(planLower, "Routine assigned successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 
@@ -69,7 +70,7 @@ public class RoutineController {
             );
         }).toList();
         return ResponseEntity.ok(
-                ApiResponse.ok(normalized, "Routine history retrieved successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(normalized, "Routine history retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 
@@ -84,13 +85,14 @@ public class RoutineController {
     public ResponseEntity<ApiResponse<Map<String, String>>> activeForDay(
             @PathVariable String dni, @RequestParam String day, HttpServletRequest http) {
 
+        // Validar día primero para mostrar errores de enum claramente
+        DayOfWeek d = DayOfWeek.valueOf(day.toUpperCase()); // puede lanzar IllegalArgumentException -> 422
         var email = ext.emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
         var active = ext.activeRoutine(email).orElseThrow(() -> new IllegalArgumentException("No active routine"));
-        DayOfWeek d = DayOfWeek.valueOf(day.toUpperCase()); // MONDAY..SATURDAY
         String block = active.getFor(d);
         var payload = java.util.Map.of("day", d.name().toLowerCase(), "block", block);
         return ResponseEntity.ok(
-                ApiResponse.ok(payload, "Active routine block retrieved successfully.",
+                ApiResponse.ok(payload, "Active routine block retrieved successfully",
                         java.time.Instant.now().toString(), http.getRequestURI())
         );
     }

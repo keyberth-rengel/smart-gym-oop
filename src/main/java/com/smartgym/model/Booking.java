@@ -1,26 +1,49 @@
 package com.smartgym.model;
 
+import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 
+@Entity
+@Table(
+    name = "bookings",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_trainer_schedule", columnNames = {"trainer_email", "date", "time"})
+    }
+)
 public class Booking {
-    private static final AtomicInteger TOTAL_COUNT = new AtomicInteger(0);
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    private final int id;
-    private final String customerEmail;
-    private final String trainerEmail;
-    private final Schedule schedule;
-    private final String note;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "customer_email", referencedColumnName = "email", nullable = false)
+    private com.smartgym.model.Customer customer;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "trainer_email", referencedColumnName = "email", nullable = false)
+    private com.smartgym.model.Trainer trainer;
+
+    @Embedded
+    private Schedule schedule;
+
+    @Column(length = 255)
+    private String note;
+
+    @Embeddable
     public static class Schedule {
-        private final LocalDate date;
-        private final LocalTime time;
+        @Column(name = "date", nullable = false)
+        private LocalDate date;
+        @Column(name = "time", nullable = false)
+        private LocalTime time;
+
+        protected Schedule() {
+        }
 
         public Schedule(LocalDate date, LocalTime time) {
             if (date == null || time == null) {
-                throw new IllegalArgumentException("Se requieren fecha y hora.");
+                throw new IllegalArgumentException("Date and time are required.");
             }
             this.date = date;
             this.time = time;
@@ -30,9 +53,7 @@ public class Booking {
         public LocalTime getTime() { return time; }
 
         @Override
-        public String toString() {
-            return date + " " + time;
-        }
+        public String toString() { return date + " " + time; }
 
         @Override
         public boolean equals(Object o) {
@@ -43,43 +64,46 @@ public class Booking {
         }
 
         @Override
-        public int hashCode() {
-            return Objects.hash(date, time);
-        }
+        public int hashCode() { return Objects.hash(date, time); }
     }
 
-    public Booking(String customerEmail, String trainerEmail, Schedule schedule) {
-        this(customerEmail, trainerEmail, schedule, null);
+    protected Booking() {
+        // JPA
     }
 
-    public Booking(String customerEmail, String trainerEmail, Schedule schedule, String note) {
-        if (customerEmail == null || trainerEmail == null || schedule == null) {
-            throw new IllegalArgumentException("Se requiere cliente, entrenador y horario.");
+    public Booking(Customer customer, Trainer trainer, Schedule schedule) {
+        this(customer, trainer, schedule, null);
+    }
+
+    public Booking(Customer customer, Trainer trainer, Schedule schedule, String note) {
+        if (customer == null || trainer == null || schedule == null) {
+            throw new IllegalArgumentException("Customer, trainer and schedule are required.");
         }
-        this.id = TOTAL_COUNT.incrementAndGet();
-        this.customerEmail = customerEmail.toLowerCase().trim();
-        this.trainerEmail = trainerEmail.toLowerCase().trim();
+        this.customer = customer;
+        this.trainer = trainer;
         this.schedule = schedule;
         this.note = note;
     }
 
-    public int getId() { return id; }
-    public String getCustomerEmail() { return customerEmail; }
-    public String getTrainerEmail() { return trainerEmail; }
+    public Long getId() { return id; }
+    public Customer getCustomer() { return customer; }
+    public Trainer getTrainer() { return trainer; }
     public Schedule getSchedule() { return schedule; }
     public String getNote() { return note; }
 
-    public static int getTotalCount() { return TOTAL_COUNT.get(); }
+    // Conveniencia para compatibilidad con controladores/DTOs existentes
+    public String getCustomerEmail() { return customer != null ? customer.getEmail() : null; }
+    public String getTrainerEmail() { return trainer != null ? trainer.getEmail() : null; }
 
     @Override
     public String toString() {
         return "Booking{" +
-                "id=" + id +
-                ", customer='" + customerEmail + '\'' +
-                ", trainer='" + trainerEmail + '\'' +
-                ", schedule=" + schedule +
-                (note != null ? ", note='" + note + '\'' : "") +
-                '}';
+            "id=" + id +
+            ", customer='" + getCustomerEmail() + '\'' +
+            ", trainer='" + getTrainerEmail() + '\'' +
+            ", schedule=" + schedule +
+            (note != null ? ", note='" + note + '\'' : "") +
+            '}';
     }
 
     @Override
@@ -87,13 +111,11 @@ public class Booking {
         if (this == o) return true;
         if (!(o instanceof Booking)) return false;
         Booking booking = (Booking) o;
-        return Objects.equals(customerEmail, booking.customerEmail) &&
-                Objects.equals(trainerEmail, booking.trainerEmail) &&
+        return Objects.equals(getCustomerEmail(), booking.getCustomerEmail()) &&
+            Objects.equals(getTrainerEmail(), booking.getTrainerEmail()) &&
                 Objects.equals(schedule, booking.schedule);
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(customerEmail, trainerEmail, schedule);
-    }
+        @Override
+        public int hashCode() { return Objects.hash(getCustomerEmail(), getTrainerEmail(), schedule); }
 }

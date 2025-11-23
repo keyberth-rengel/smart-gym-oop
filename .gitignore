@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### H2 runtime database files (do not commit) ###
+smartgymdb.mv.db
+smartgymdb.trace.db
+*.mv.db
+*.trace.db

@@ -1,0 +1,162 @@
+@host = http://localhost:8080
+@today = {{$datetime 'yyyy-MM-dd'}}
+
+###
+# Crear Customer
+POST {{host}}/api/v1/customers
+Content-Type: application/json
+
+{
+  "email": "alice@example.com",
+  "name": "Alice Runner",
+  "age": 29
+}
+
+###
+# Obtener Customer por email
+GET {{host}}/api/v1/customers/alice@example.com
+Accept: application/json
+
+###
+# Crear Trainer
+POST {{host}}/api/v1/trainers
+Content-Type: application/json
+
+{
+  "email": "coach.bob@example.com",
+  "name": "Bob Coach",
+  "age": 40,
+  "specialty": "strength"
+}
+
+###
+# Obtener Trainer por email
+GET {{host}}/api/v1/trainers/coach.bob@example.com
+Accept: application/json
+
+###
+# Linkear DNI a Customer
+POST {{host}}/api/v1/identity/customer
+Content-Type: application/json
+
+{
+  "dni": "12345678",
+  "email": "alice@example.com"
+}
+
+###
+# Linkear DNI a Trainer
+POST {{host}}/api/v1/identity/trainer
+Content-Type: application/json
+
+{
+  "dni": "87654321",
+  "email": "coach.bob@example.com"
+}
+
+###
+# Resolver identidad por DNI (Customer)
+GET {{host}}/api/v1/identity/12345678
+Accept: application/json
+
+###
+# Crear Booking (fecha fijada por el servidor = hoy)
+# Ajusta la hora si ya existe una reserva para ese trainer
+POST {{host}}/api/v1/bookings
+Content-Type: application/json
+
+{
+  "customerEmail": "alice@example.com",
+  "trainerEmail": "coach.bob@example.com",
+  "time": "10:30",
+  "note": "Primera sesión"
+}
+
+###
+# Listar todas las Bookings
+GET {{host}}/api/v1/bookings
+Accept: application/json
+
+###
+# Listar Bookings de un Trainer por fecha
+GET {{host}}/api/v1/trainers/coach.bob@example.com/bookings?date={{today}}
+Accept: application/json
+
+###
+# Registrar acceso por DNI (Customer)
+POST {{host}}/api/v1/access
+Content-Type: application/json
+
+{
+  "dni": "12345678"
+}
+
+###
+# Listar asistencia por DNI (Customer)
+GET {{host}}/api/v1/attendance/12345678
+Accept: application/json
+
+###
+# Agregar progreso (peso, % grasa, % músculo) para Customer por DNI
+POST {{host}}/api/v1/progress
+Content-Type: application/json
+
+{
+  "dni": "12345678",
+  "weightKg": 70.4,
+  "bodyFatPct": 18.2,
+  "musclePct": 42.0
+}
+
+###
+# Listar progreso por DNI
+GET {{host}}/api/v1/progress/12345678
+Accept: application/json
+
+###
+# Asignar rutina semanal aleatoria al Customer por DNI
+POST {{host}}/api/v1/routines/assign
+Content-Type: application/json
+
+{
+  "dni": "12345678"
+}
+
+###
+# Historial de rutinas por DNI
+GET {{host}}/api/v1/routines/history/12345678
+Accept: application/json
+
+###
+# Rutina activa para un día específico (ejemplo: monday)
+GET {{host}}/api/v1/routines/active/12345678?day=monday
+Accept: application/json
+
+###
+# Caso negativo: Booking duplicada (mismo trainer/hoy/time) => 409 esperado
+POST {{host}}/api/v1/bookings
+Content-Type: application/json
+
+{
+  "customerEmail": "alice@example.com",
+  "trainerEmail": "coach.bob@example.com",
+  "time": "10:30",
+  "note": "Conflicto"
+}
+
+###
+# Caso negativo: DNI no linkeado en asistencia => 404/422 según validación
+GET {{host}}/api/v1/attendance/00000000
+Accept: application/json
+
+###
+# Caso negativo: Progreso con valores fuera de rango => 422
+POST {{host}}/api/v1/progress
+Content-Type: application/json
+
+{
+  "dni": "12345678",
+  "weightKg": 0.0,
+  "bodyFatPct": -1,
+  "musclePct": 200
+}

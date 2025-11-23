@@ -6,66 +6,93 @@ import com.smartgym.domain.ProgressRecord;
 import com.smartgym.domain.Routine;
 import com.smartgym.model.Customer;
 import com.smartgym.model.Trainer;
+import com.smartgym.repository.AttendanceRecordRepository;
+import com.smartgym.repository.ProgressRecordRepository;
+import com.smartgym.repository.RoutineRepository;
+import com.smartgym.repository.IdentityLinkRepository;
 import com.smartgym.service.SmartGymService;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
+@Component
 public class GymExtensions {
 
     private final SmartGymService core;
+    private final RoutineRepository routineRepository;
+    private final ProgressRecordRepository progressRepository;
+    private final AttendanceRecordRepository attendanceRepository;
+    private final IdentityLinkRepository identityLinkRepository;
 
-    private final Map<String, String> dniToEmail = new HashMap<>();
-    private final Map<String, PaymentMethod> payments = new HashMap<>();
-    private final Map<String, List<Routine>> routinesByCustomer = new HashMap<>();
-    private final List<AttendanceRecord> attendance = new ArrayList<>();
-    private final Map<String, List<ProgressRecord>> progressByCustomer = new HashMap<>();
-
-    public GymExtensions(SmartGymService core) {
+    public GymExtensions(SmartGymService core,
+                         RoutineRepository routineRepository,
+                         ProgressRecordRepository progressRepository,
+                         AttendanceRecordRepository attendanceRepository,
+                         IdentityLinkRepository identityLinkRepository) {
         this.core = core;
+        this.routineRepository = routineRepository;
+        this.progressRepository = progressRepository;
+        this.attendanceRepository = attendanceRepository;
+        this.identityLinkRepository = identityLinkRepository;
     }
 
+    @Transactional
     public void registerCustomerIdentity(String dni, String email) {
-        dniToEmail.put(normalize(dni), normalize(email));
+        var key = normalize(dni);
+        var value = normalize(email);
+        identityLinkRepository.findById(key)
+                .ifPresentOrElse(
+                        il -> { il.setEmail(value); },
+                        () -> identityLinkRepository.save(new com.smartgym.domain.IdentityLink(key, value))
+                );
     }
 
+    @Transactional
     public void registerTrainerIdentity(String dni, String email) {
-        dniToEmail.put(normalize(dni), normalize(email));
+        // Igual que cliente; mapeo único por DNI
+        registerCustomerIdentity(dni, email);
     }
 
     public Optional<String> emailByDni(String dni) {
-        return Optional.ofNullable(dniToEmail.get(normalize(dni)));
+        return identityLinkRepository.findById(normalize(dni)).map(com.smartgym.domain.IdentityLink::getEmail);
     }
 
+    @Transactional
     public void setPayment(String customerEmail, PaymentMethod pm) {
-        payments.put(normalize(customerEmail), pm);
+        var customer = core.findCustomer(customerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerEmail));
+        customer.setPaymentMethod(pm);
+        // Persistencia por dirty checking dentro de la transacción
     }
 
     public Optional<PaymentMethod> getPayment(String customerEmail) {
-        return Optional.ofNullable(payments.get(normalize(customerEmail)));
+        return core.findCustomer(customerEmail).map(Customer::getPaymentMethod);
     }
 
+    @Transactional
     public Routine assignRandomRoutine(String customerEmail) {
-        String key = normalize(customerEmail);
-        Routine r = new Routine(randomWeeklyPlan());
-        routinesByCustomer.computeIfAbsent(key, k -> new ArrayList<>()).add(r);
-        return r;
+        var customer = core.findCustomer(customerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerEmail));
+        Routine r = new Routine(customer, randomWeeklyPlan());
+        return routineRepository.save(r);
     }
 
     public List<Routine> routineHistory(String customerEmail) {
-        return routinesByCustomer.getOrDefault(normalize(customerEmail), List.of());
+        return routineRepository.findByCustomerEmailOrderByCreatedAtAsc(normalize(customerEmail));
     }
 
+    @Transactional(readOnly = true)
     public Optional<Routine> activeRoutine(String customerEmail) {
-        var list = routinesByCustomer.get(normalize(customerEmail));
-        if (list == null || list.isEmpty()) return Optional.empty();
-        return Optional.of(list.get(list.size() - 1));
+        return routineRepository.findFirstByCustomerEmailOrderByCreatedAtDesc(normalize(customerEmail));
     }
 
+    @Transactional
     public String accessByDni(String dni) {
         String key = normalize(dni);
-        String email = dniToEmail.get(key);
+        String email = emailByDni(key).orElse(null);
         if (email == null) throw new IllegalArgumentException("DNI not linked");
 
         var roleOpt =
@@ -75,11 +102,7 @@ public class GymExtensions {
         if (roleOpt.isEmpty()) throw new IllegalArgumentException("Identity not recognized for the linked email");
         var role = roleOpt.get();
 
-        attendance.add(new AttendanceRecord(
-                email,
-                role,
-                java.time.LocalDateTime.now()
-        ));
+        attendanceRepository.save(new AttendanceRecord(email, role));
 
         String name = (role == AttendanceRecord.Role.CUSTOMER)
                 ? core.findCustomer(email).map(Customer::getName).orElse("Customer")
@@ -88,25 +111,23 @@ public class GymExtensions {
         return "Welcome " + name + "! Access recorded for " + email + ".";
     }
 
+    @Transactional(readOnly = true)
     public List<AttendanceRecord> attendanceByEmail(String email) {
-        String key = normalize(email);
-        List<AttendanceRecord> out = new ArrayList<>();
-        for (var a : attendance) {
-            if (a.getEmail().equals(key)) out.add(a);
-        }
-        return out;
+        return attendanceRepository.findByEmailOrderByTimestampAsc(normalize(email));
     }
 
+    @Transactional
     public void addProgressByDni(String dni, double weightKg, double bodyFatPct, double musclePct) {
         String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
-        String key = normalize(email);
-        progressByCustomer.computeIfAbsent(key, k -> new ArrayList<>())
-                .add(new ProgressRecord(LocalDate.now(), weightKg, bodyFatPct, musclePct));
+        var customer = core.findCustomer(email)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + email));
+        progressRepository.save(new ProgressRecord(customer, LocalDate.now(), weightKg, bodyFatPct, musclePct));
     }
 
+    @Transactional(readOnly = true)
     public List<ProgressRecord> progressByDni(String dni) {
         String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
-        return progressByCustomer.getOrDefault(normalize(email), List.of());
+        return progressRepository.findByCustomerEmailOrderByDateAsc(normalize(email));
     }
 
     private Map<DayOfWeek, String> randomWeeklyPlan() {

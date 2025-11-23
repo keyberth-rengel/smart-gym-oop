@@ -41,11 +41,10 @@ public class BookingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping("/bookings")
     public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody BookingCreateRequest req, HttpServletRequest http) {
-        var date = LocalDate.parse(req.date());
-        var time = LocalTime.parse(req.time());
+                var time = LocalTime.parse(req.time());
         Booking b = (req.note() == null || req.note().isBlank())
-                ? service.createBooking(req.customerEmail(), req.trainerEmail(), date, time)
-                : service.createBooking(req.customerEmail(), req.trainerEmail(), date, time, req.note());
+                ? service.createBookingToday(req.customerEmail(), req.trainerEmail(), time)
+                : service.createBookingToday(req.customerEmail(), req.trainerEmail(), time, req.note());
 
         var resp = new BookingResponse(
                 b.getId(),
@@ -56,7 +55,7 @@ public class BookingController {
                 b.getNote()
         );
         return ResponseEntity.status(201).body(
-                ApiResponse.ok(resp, "Booking created successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(resp, "Booking created successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 
@@ -68,7 +67,7 @@ public class BookingController {
     public ResponseEntity<ApiResponse<List<BookingResponse>>> listAll(HttpServletRequest http) {
         var list = service.listBookings().stream().map(this::toResponse).toList();
         return ResponseEntity.ok(
-                ApiResponse.ok(list, "All bookings retrieved successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(list, "All bookings retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 
@@ -83,7 +82,7 @@ public class BookingController {
             HttpServletRequest http) {
         var list = service.listTrainerBookings(email, date).stream().map(this::toResponse).toList();
         return ResponseEntity.ok(
-                ApiResponse.ok(list, "Trainer bookings for the given date retrieved successfully.", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(list, "Trainer bookings for the given date retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 
@@ -92,26 +91,20 @@ public class BookingController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "Not found",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
-    @DeleteMapping("/bookings/{id}")
-    public ResponseEntity<ApiResponse<?>> delete(@PathVariable int id,
-                                                 jakarta.servlet.http.HttpServletRequest http) {
-        service.cancelBooking(id);
-        var payload = java.util.Map.of("id", id, "status", "CANCELLED");
-        return org.springframework.http.ResponseEntity.ok(
-                com.smartgym.api.common.ApiResponse.ok(
-                        payload, "Booking cancelled successfully.", java.time.Instant.now().toString(), http.getRequestURI()
-                )
-        );
-    }
+        @DeleteMapping("/bookings/{id}")
+        public ResponseEntity<Void> delete(@PathVariable long id) {
+                service.cancelBooking(id);
+                return ResponseEntity.noContent().build(); // 204 sin contenido según convención REST
+        }
 
-    private BookingResponse toResponse(Booking b) {
-        return new BookingResponse(
-                b.getId(),
-                b.getCustomerEmail(),
-                b.getTrainerEmail(),
-                b.getSchedule().getDate().toString(),
-                b.getSchedule().getTime().toString(),
-                b.getNote()
-        );
-    }
+        private BookingResponse toResponse(Booking b) {
+                return new BookingResponse(
+                                b.getId(),
+                                b.getCustomerEmail(),
+                                b.getTrainerEmail(),
+                                b.getSchedule().getDate().toString(),
+                                b.getSchedule().getTime().toString(),
+                                b.getNote()
+                );
+        }
 }
