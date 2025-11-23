@@ -1,0 +1,40 @@
+@startuml
+skinparam shadowing false
+hide methods
+skinparam classAttributeIconSize 0
+skinparam classFontStyle plain
+
+interface CustomerRepository
+interface TrainerRepository
+interface BookingRepository
+interface ProgressRecordRepository
+interface RoutineRepository
+interface IdentityLinkRepository
+interface AttendanceRecordRepository
+
+class SmartGymService {
+  - customerRepository
+  - trainerRepository
+  - bookingRepository
+  - progressRecordRepository
+  - routineRepository
+  - identityLinkRepository
+  - attendanceRecordRepository
+  + addCustomer(...)
+  + addTrainer(...)
+  + createBookingToday(...)
+  + listBookings()
+  + cancelBooking(id)
+  + listTrainerBookings(...)
+  + findCustomer(...)
+  + findTrainer(...)
+}
+
+SmartGymService ..> CustomerRepository
+SmartGymService ..> TrainerRepository
+SmartGymService ..> BookingRepository
+SmartGymService ..> ProgressRecordRepository
+SmartGymService ..> RoutineRepository
+SmartGymService ..> IdentityLinkRepository
+SmartGymService ..> AttendanceRecordRepository
+@enduml

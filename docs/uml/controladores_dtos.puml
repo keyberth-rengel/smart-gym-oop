@@ -1,0 +1,77 @@
+@startuml
+skinparam shadowing false
+hide methods
+skinparam classAttributeIconSize 0
+skinparam classFontStyle plain
+
+package "DTOs" {
+  class BookingCreateRequest {
+    customerEmail: String
+    trainerEmail: String
+    time: String
+    note: String
+  }
+  class BookingResponse {
+    id: Long
+    customerEmail: String
+    trainerEmail: String
+    date: String
+    time: String
+    note: String
+  }
+  class CustomerDto {
+    email: String
+    name: String
+    age: int
+  }
+  class TrainerDto {
+    email: String
+    name: String
+    age: int
+    specialty: String
+  }
+  class ProgressCreateRequest {
+    dni: String
+    weightKg: double
+    bodyFatPct: double
+    musclePct: double
+  }
+}
+
+package "Controllers" {
+  class CustomerController
+  class TrainerController
+  class BookingController
+  class ProgressController
+  class RoutineController
+  class AccessController
+  class IdentityController
+  class HealthController
+}
+
+class ApiResponse<T> {
+  success: boolean
+  data: T
+  message: String
+  timestamp: String
+  path: String
+  requestId: String
+}
+
+SmartGymService <.. CustomerController
+SmartGymService <.. TrainerController
+SmartGymService <.. BookingController
+SmartGymService <.. ProgressController
+SmartGymService <.. RoutineController
+SmartGymService <.. AccessController
+SmartGymService <.. IdentityController
+SmartGymService <.. HealthController
+
+BookingController ..> BookingCreateRequest
+BookingController ..> BookingResponse
+CustomerController ..> CustomerDto
+TrainerController ..> TrainerDto
+ProgressController ..> ProgressCreateRequest
+
+Controllers ..> ApiResponse
+@enduml

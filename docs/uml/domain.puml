@@ -1,0 +1,77 @@
+@startuml
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam classFontStyle plain
+hide methods
+
+package "Domain Model" {
+  class Customer {
+    email: String
+    name: String
+    age: int
+    bookingHistory: List<String>
+    paymentMethod: PaymentMethod
+  }
+
+  class Trainer {
+    email: String
+    name: String
+    age: int
+    specialty: String
+  }
+
+  class Booking {
+    id: Long
+    customer: Customer
+    trainer: Trainer
+    schedule: Schedule
+    note: String
+  }
+
+  class Schedule {
+    date: LocalDate
+    time: LocalTime
+  }
+
+  class ProgressRecord {
+    id: Long
+    customer: Customer
+    date: LocalDate
+    weightKg: double
+    bodyFatPct: double
+    musclePct: double
+  }
+
+  class Routine {
+    id: Long
+    customer: Customer
+    plan: Map<DayOfWeek,String>
+    createdAt: Instant
+  }
+
+  class IdentityLink {
+    dni: String
+    email: String
+  }
+
+  class AttendanceRecord {
+    id: Long
+    email: String
+    role: String
+    timestamp: Instant
+  }
+
+  class PaymentMethod {
+    cardNumber(last4): String
+  }
+
+  Customer "1" <-- "many" Booking : customer
+  Trainer  "1" <-- "many" Booking : trainer
+  Customer "1" <-- "many" ProgressRecord : progress
+  Customer "1" <-- "many" Routine : routines
+  Customer "1" <-- "many" IdentityLink : identities
+  Customer "1" o-- PaymentMethod : embedded
+  Booking *-- Schedule : embedded
+}
+
+@enduml

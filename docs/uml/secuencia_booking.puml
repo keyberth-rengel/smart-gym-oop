@@ -1,0 +1,20 @@
+@startuml
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam sequenceArrowThickness 1
+
+actor Client
+Client -> BookingController: POST /bookings (BookingCreateRequest)
+activate BookingController
+BookingController -> SmartGymService: createBookingToday(customerEmail, trainerEmail, time)
+activate SmartGymService
+SmartGymService -> CustomerRepository: findById(email)
+SmartGymService -> TrainerRepository: findById(email)
+SmartGymService -> BookingRepository: save(Booking)
+BookingRepository --> SmartGymService: Booking (id)
+SmartGymService --> BookingController: Booking
+deactivate SmartGymService
+BookingController -> ApiResponse: wrap BookingResponse + requestId
+BookingController --> Client: 201 ApiResponse<BookingResponse>
+deactivate BookingController
+@enduml
