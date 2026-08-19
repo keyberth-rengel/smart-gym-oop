@@ -284,7 +284,7 @@ Si quieres contribuir:
 ---
 
 ### Licencia y autor
-Autores: Keyberth Rengel, Nelver Vigos, Eduardo Ruiz
+Autores: Keyberth Rengel
 
 ---
 ## Estado versión 1.0
