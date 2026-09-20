@@ -1,5 +1,6 @@
 package com.smartgym.api.controller;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.TrainerCreateRequest;
 import com.smartgym.api.dto.TrainerCreatedResponse;
@@ -81,7 +82,7 @@ public class TrainerController {
     public ResponseEntity<ApiResponse<?>> invite(@PathVariable String email, HttpServletRequest req) {
         access.requireAdmin();
         var trainer = service.findTrainer(email)
-                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + email));
+                .orElseThrow(() -> new NotFoundException("Trainer not found: " + email));
         InvitationResult result = clerk.invite(trainer.getEmail(), TRAINER_ROLE);
         return ResponseEntity.ok(
                 ApiResponse.ok(result, "Invitation processed", java.time.Instant.now().toString(), req.getRequestURI())
@@ -112,7 +113,7 @@ public class TrainerController {
     @GetMapping("/{email}")
     public ResponseEntity<ApiResponse<?>> get(@PathVariable String email, HttpServletRequest req) {
         var t = service.findTrainer(email)
-                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + email));
+                .orElseThrow(() -> new NotFoundException("Trainer not found: " + email));
         return ResponseEntity.ok(
                 ApiResponse.ok(new TrainerDto(t.getEmail(), t.getName(), t.getAge(), t.getSpecialty()),
                         "Trainer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())

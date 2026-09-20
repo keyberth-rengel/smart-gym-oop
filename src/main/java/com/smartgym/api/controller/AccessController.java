@@ -1,5 +1,6 @@
 package com.smartgym.api.controller;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.AccessRequest;
 import com.smartgym.application.GymExtensions;
@@ -55,7 +56,7 @@ public class AccessController {
         access.requireOwnDniOrAdmin(dni);
         var emailOpt = ext.emailByDni(dni);
         if (emailOpt.isEmpty()) {
-            throw new IllegalArgumentException("DNI not linked");
+            throw new NotFoundException("DNI not linked");
         }
         var list = ext.attendanceByEmail(emailOpt.get());
         return ResponseEntity.ok(

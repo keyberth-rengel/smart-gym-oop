@@ -255,7 +255,7 @@ Content-Type: application/json
 }
 
 ###
-# Caso negativo: DNI no linkeado en asistencia => 404/422 según validación
+# Caso negativo: DNI no vinculado en asistencia => 404 NOT_FOUND ("DNI not linked")
 GET {{host}}/api/v1/attendance/00000000
 Authorization: Bearer {{token}}
 Accept: application/json

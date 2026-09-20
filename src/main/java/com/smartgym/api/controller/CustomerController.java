@@ -1,5 +1,6 @@
 package com.smartgym.api.controller;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.CustomerDto;
 import com.smartgym.application.RegistrationService;
@@ -88,7 +89,7 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<?>> get(@PathVariable String email, HttpServletRequest req) {
         access.requireCustomerDataByEmail(email);
         var c = service.findCustomer(email)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + email));
+                .orElseThrow(() -> new NotFoundException("Customer not found: " + email));
         return ResponseEntity.ok(
                 ApiResponse.ok(new CustomerSummary(c.getEmail(), c.getName(), c.getAge()), "Customer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
@@ -113,7 +114,7 @@ public class CustomerController {
             );
         }
         var c = service.findCustomer(emailOpt.get())
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found for DNI: " + dni));
+                .orElseThrow(() -> new NotFoundException("Customer not found for DNI: " + dni));
         return ResponseEntity.ok(
                 ApiResponse.ok(new CustomerSummary(c.getEmail(), c.getName(), c.getAge()), "Customer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );

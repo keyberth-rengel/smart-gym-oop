@@ -118,10 +118,10 @@ class TrainerEndpointsTest {
     }
 
     @Test
-    void customersUnknownTrainerIs422ForAdminAndForTheTrainerHimself() throws Exception {
-        call("/api/v1/trainers/nadie@x.com/customers", "admin", "a@x.com").andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"));
-        call("/api/v1/trainers/nadie@x.com/customers", "entrenador", "nadie@x.com").andExpect(status().isUnprocessableEntity());
+    void customersUnknownTrainerIs404ForAdminAndForTheTrainerHimself() throws Exception {
+        call("/api/v1/trainers/nadie@x.com/customers", "admin", "a@x.com").andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+        call("/api/v1/trainers/nadie@x.com/customers", "entrenador", "nadie@x.com").andExpect(status().isNotFound());
     }
 
     @Test
@@ -334,8 +334,8 @@ class TrainerEndpointsTest {
     }
 
     @Test
-    void availabilityUnknownTrainerIs422() throws Exception {
-        call("/api/v1/trainers/nadie@x.com/availability", "cliente", "c@x.com").andExpect(status().isUnprocessableEntity());
+    void availabilityUnknownTrainerIs404() throws Exception {
+        call("/api/v1/trainers/nadie@x.com/availability", "cliente", "c@x.com").andExpect(status().isNotFound());
     }
 
     @Test

@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import static com.smartgym.security.TestJwtDecoderConfig.token;
 import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -133,5 +134,47 @@ class ErrorFormatAndSundayTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    void missingResourcesReturn404WithApiResponseFormatAndUnchangedMessages() throws Exception {
+        String admin = "Bearer " + token("admin", "admin@x.com");
+        mvc.perform(get("/api/v1/customers/ghost@x.com").header("Authorization", admin))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("Customer not found: ghost@x.com"))
+                .andExpect(jsonPath("$.request_id").exists());
+        mvc.perform(get("/api/v1/trainers/ghost@x.com").header("Authorization", admin))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Trainer not found: ghost@x.com"));
+        mvc.perform(delete("/api/v1/bookings/999999").header("Authorization", admin))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Booking not found: id=999999"));
+        mvc.perform(get("/api/v1/routines/history/00000000").header("Authorization", admin))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("DNI not linked"));
+        // sin rutina asignada: "No active routine" también es 404
+        as("cliente", "/api/v1/routines/active/" + DNI + "?day=monday")
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("No active routine"));
+    }
+
+    @Test
+    void forbiddenComesBeforeNotFound() throws Exception {
+        // un cliente que pide el DNI de otro (existente o no) recibe el mismo 403, nunca 404
+        mvc.perform(get("/api/v1/routines/history/00000000").header("Authorization", "Bearer " + token("cliente", EMAIL)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/routines/history/99999999").header("Authorization", "Bearer " + token("cliente", EMAIL)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void businessRulesKeep422And409() throws Exception {
+        // día inválido sigue siendo 422 (validación), no 404
+        assign();
+        as("cliente", "/api/v1/routines/active/" + DNI + "?day=funday")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"));
     }
 }

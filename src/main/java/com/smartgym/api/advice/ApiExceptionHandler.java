@@ -118,6 +118,14 @@ public class ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleNotFound(NotFoundException ex, HttpServletRequest req) {
+        return ResponseEntity.status(404).body(
+                ApiResponse.fail("NOT_FOUND", ex.getMessage(), null,
+                        Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
     @ExceptionHandler(DomainValidationException.class)
     public ResponseEntity<ApiResponse<?>> handleDomainValidation(DomainValidationException ex,
                                                                  HttpServletRequest req) {

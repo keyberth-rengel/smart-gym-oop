@@ -199,9 +199,8 @@ class TrainerInvitationTest {
 
     @Test
     void retryForUnknownTrainerIsNotFoundLikeOtherLookupsAndDoesNotInvite() throws Exception {
-        // B9 cambia este "no encontrado" de 422 a 404 (ver TrainerInvitationTest en esa rama).
-        send("/api/v1/trainers/nadie@x.com/invite", "admin", ADMIN, null)
-                .andExpect(status().isUnprocessableEntity())
+                send("/api/v1/trainers/nadie@x.com/invite", "admin", ADMIN, null)
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value(containsString("Trainer not found")));
         verifyNoInteractions(clerk);
     }

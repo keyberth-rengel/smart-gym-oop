@@ -1,5 +1,6 @@
 package com.smartgym.api.controller;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.RoutineAssignRequest;
 import com.smartgym.application.GymExtensions;
@@ -54,7 +55,7 @@ public class RoutineController {
             access.requireRoutineAssignByEmail(req.customerEmail());
         }
         var email = byDni
-                ? ext.emailByDni(req.dni()).orElseThrow(() -> new IllegalArgumentException("DNI not linked"))
+                ? ext.emailByDni(req.dni()).orElseThrow(() -> new NotFoundException("DNI not linked"))
                 : req.customerEmail();
         var r = ext.assignRandomRoutine(email);
         var planLower = r.getPlan().entrySet().stream()
@@ -78,7 +79,7 @@ public class RoutineController {
     @GetMapping("/history/{dni}")
     public ResponseEntity<ApiResponse<Object>> history(@PathVariable String dni, HttpServletRequest http) {
         access.requireCustomerDataByDni(dni);
-        var email = ext.emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
+        var email = ext.emailByDni(dni).orElseThrow(() -> new NotFoundException("DNI not linked"));
         return historyResponse(email, http);
     }
 
@@ -123,7 +124,7 @@ public class RoutineController {
         access.requireCustomerDataByDni(dni);
         // Validar día primero para mostrar errores de enum claramente
         DayOfWeek d = DayOfWeek.valueOf(day.toUpperCase()); // puede lanzar IllegalArgumentException -> 422
-        var email = ext.emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
+        var email = ext.emailByDni(dni).orElseThrow(() -> new NotFoundException("DNI not linked"));
         return activeResponse(email, d, http);
     }
 
@@ -138,7 +139,7 @@ public class RoutineController {
     }
 
     private ResponseEntity<ApiResponse<Map<String, String>>> activeResponse(String email, DayOfWeek d, HttpServletRequest http) {
-        var active = ext.activeRoutine(email).orElseThrow(() -> new IllegalArgumentException("No active routine"));
+        var active = ext.activeRoutine(email).orElseThrow(() -> new NotFoundException("No active routine"));
         String block = active.getFor(d);
         // Map.of no admite null: un día sin bloque (p. ej. domingo) responde block:null en vez de 500.
         var payload = new java.util.LinkedHashMap<String, String>();

@@ -1,5 +1,6 @@
 package com.smartgym.service;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.model.Booking;
 import com.smartgym.model.Customer;
 import com.smartgym.model.Trainer;
@@ -108,9 +109,9 @@ public class SmartGymService {
         String tKey = normalize(trainerEmail);
 
         Customer customer = customerRepository.findById(cKey)
-                .orElseThrow(() -> new IllegalArgumentException("Customer does not exist: " + customerEmail));
+                .orElseThrow(() -> new NotFoundException("Customer does not exist: " + customerEmail));
         Trainer trainer = trainerRepository.findById(tKey)
-            .orElseThrow(() -> new IllegalArgumentException("Trainer does not exist: " + trainerEmail));
+            .orElseThrow(() -> new NotFoundException("Trainer does not exist: " + trainerEmail));
 
         Booking.Schedule schedule = new Booking.Schedule(date, time);
 
@@ -163,7 +164,7 @@ public class SmartGymService {
     @Transactional(readOnly = true)
     public List<TrainerCustomerRow> listTrainerCustomers(String trainerEmail) {
         Trainer trainer = findTrainer(trainerEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + trainerEmail));
+                .orElseThrow(() -> new NotFoundException("Trainer not found: " + trainerEmail));
         return bookingRepository.findTrainerCustomers(trainer.getEmail());
     }
 
@@ -171,7 +172,7 @@ public class SmartGymService {
     @Transactional(readOnly = true)
     public List<LocalTime> listBookedTimes(String trainerEmail, LocalDate date) {
         Trainer trainer = findTrainer(trainerEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + trainerEmail));
+                .orElseThrow(() -> new NotFoundException("Trainer not found: " + trainerEmail));
         return bookingRepository.findByTrainer_EmailAndSchedule_Date(trainer.getEmail(), date).stream()
                 .map(b -> b.getSchedule().getTime())
                 .sorted()
@@ -181,7 +182,7 @@ public class SmartGymService {
     @Transactional
     public boolean cancelBooking(long bookingId) {
         if (!bookingRepository.existsById(bookingId)) {
-            throw new IllegalArgumentException("Booking not found: id=" + bookingId);
+            throw new NotFoundException("Booking not found: id=" + bookingId);
         }
         bookingRepository.deleteById(bookingId);
         return true;

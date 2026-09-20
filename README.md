@@ -639,11 +639,11 @@ Taxonomia HTTP:
 | `201` | Recurso creado |
 | `204` | Eliminacion exitosa sin cuerpo |
 | `400` | JSON malformado, campos invalidos o parametros requeridos faltantes |
-| `404` | Ruta o recurso no encontrado cuando el controlador lo devuelve explicitamente |
+| `404` | Recurso inexistente o DNI no vinculado (`error.code = NOT_FOUND`; mensajes como `Customer not found: ...`, `DNI not linked`, `No active routine`), o ruta inexistente. Un `403` por rol se evalua antes que el `404` |
 | `405` | Metodo HTTP no permitido |
 | `409` | Conflicto de unicidad o estado duplicado |
 | `415` | `Content-Type` no soportado |
-| `422` | Regla de negocio violada |
+| `422` | Regla de negocio violada (p. ej. `Bookings in the past are not allowed.`, `from` posterior a `to`, dia de la semana invalido); ya no se usa para "no encontrado" |
 | `500` | Error inesperado |
 
 ## Pruebas

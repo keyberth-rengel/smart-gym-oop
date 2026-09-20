@@ -169,7 +169,7 @@ class AccessMatrixTest {
                 c("DELETE", "/api/v1/bookings/{B}", null, "CARLOS", 403),
                 c("DELETE", "/api/v1/bookings/{B}", null, "LUCIA", 403),
                 c("DELETE", "/api/v1/bookings/{B}", null, "ANON", 401),
-                c("DELETE", "/api/v1/bookings/999999", null, "ADMIN", 422),
+                c("DELETE", "/api/v1/bookings/999999", null, "ADMIN", 404),
                 c("DELETE", "/api/v1/bookings/999999", null, "CARLOS", 403),
                 // ---- customers
                 c("POST", "/api/v1/customers", "{\"email\":\"nuevo@x.com\",\"name\":\"Nuevo\",\"age\":30}", "ADMIN", 201),
@@ -190,7 +190,7 @@ class AccessMatrixTest {
                 c("GET", "/api/v1/customers/" + CARLOS, null, "LUCIA_UPPER", 200),
                 c("GET", "/api/v1/customers/" + CARLOS, null, "MARCO", 403),      // sin relación
                 c("GET", "/api/v1/customers/" + CARLOS, null, "ANON", 401),
-                c("GET", "/api/v1/customers/ghost@x.com", null, "ADMIN", 422),
+                c("GET", "/api/v1/customers/ghost@x.com", null, "ADMIN", 404),
                 c("GET", "/api/v1/customers/ghost@x.com", null, "LUCIA", 403),
                 c("GET", "/api/v1/customers/ghost@x.com", null, "CARLOS", 403),
                 c("GET", "/api/v1/customers/by-dni/" + DNI_CARLOS, null, "ADMIN", 200),
@@ -233,11 +233,11 @@ class AccessMatrixTest {
                 c("POST", "/api/v1/progress", prog, "LUCIA", 403), c("POST", "/api/v1/progress", prog, "MARCO", 403),
                 c("POST", "/api/v1/progress", prog, "ANON", 401),
                 c("POST", "/api/v1/progress", prog.replace(DNI_CARLOS, DNI_UNLINKED), "CARLOS", 403),
-                c("POST", "/api/v1/progress", prog.replace(DNI_CARLOS, DNI_UNLINKED), "ADMIN", 422),
+                c("POST", "/api/v1/progress", prog.replace(DNI_CARLOS, DNI_UNLINKED), "ADMIN", 404),
                 c("GET", "/api/v1/progress/" + DNI_CARLOS, null, "CARLOS", 200), c("GET", "/api/v1/progress/" + DNI_CARLOS, null, "ADMIN", 200),
                 c("GET", "/api/v1/progress/" + DNI_CARLOS, null, "LUCIA", 200), c("GET", "/api/v1/progress/" + DNI_CARLOS, null, "ROSA", 403),
                 c("GET", "/api/v1/progress/" + DNI_CARLOS, null, "MARCO", 403), c("GET", "/api/v1/progress/" + DNI_CARLOS, null, "ANON", 401),
-                c("GET", "/api/v1/progress/" + DNI_UNLINKED, null, "CARLOS", 403), c("GET", "/api/v1/progress/" + DNI_UNLINKED, null, "ADMIN", 422),
+                c("GET", "/api/v1/progress/" + DNI_UNLINKED, null, "CARLOS", 403), c("GET", "/api/v1/progress/" + DNI_UNLINKED, null, "ADMIN", 404),
                 c("GET", "/api/v1/progress/by-email/" + CARLOS, null, "CARLOS", 200),
                 c("GET", "/api/v1/progress/by-email/CARLOS@X.COM", null, "CARLOS", 200),
                 c("GET", "/api/v1/progress/by-email/" + CARLOS, null, "ADMIN", 200),
@@ -254,7 +254,7 @@ class AccessMatrixTest {
                 c("POST", "/api/v1/routines/assign", "{\"dni\":\"" + DNI_CARLOS + "\"}", "ANON", 401),
                 c("POST", "/api/v1/routines/assign", "{\"dni\":\"" + DNI_ROSA + "\"}", "LUCIA", 403),        // Rosa no es su cliente
                 c("POST", "/api/v1/routines/assign", "{\"dni\":\"" + DNI_UNLINKED + "\"}", "LUCIA", 403),
-                c("POST", "/api/v1/routines/assign", "{\"dni\":\"" + DNI_UNLINKED + "\"}", "ADMIN", 422),
+                c("POST", "/api/v1/routines/assign", "{\"dni\":\"" + DNI_UNLINKED + "\"}", "ADMIN", 404),
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"" + CARLOS + "\"}", "ADMIN", 201),
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"" + CARLOS + "\"}", "LUCIA", 201),
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"CARLOS@X.COM\"}", "LUCIA_UPPER", 201),
@@ -264,7 +264,7 @@ class AccessMatrixTest {
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"" + CARLOS + "\"}", "CARLOS", 403),
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"" + ROSA + "\"}", "LUCIA", 403),
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"ghost@x.com\"}", "LUCIA", 403),
-                c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"ghost@x.com\"}", "ADMIN", 422),
+                c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"ghost@x.com\"}", "ADMIN", 404),
                 c("POST", "/api/v1/routines/assign", "{\"customer_email\":\"" + CARLOS + "\"}", "ANON", 401),
                 c("POST", "/api/v1/routines/assign", "{\"dni\":\"" + DNI_CARLOS + "\",\"customer_email\":\"" + CARLOS + "\"}", "ADMIN", 400), // ambos
                 c("POST", "/api/v1/routines/assign", "{}", "ADMIN", 400),                                                                    // ninguno
@@ -274,7 +274,7 @@ class AccessMatrixTest {
                 c("GET", "/api/v1/routines/history/" + DNI_CARLOS, null, "CARLOS", 200), c("GET", "/api/v1/routines/history/" + DNI_CARLOS, null, "ADMIN", 200),
                 c("GET", "/api/v1/routines/history/" + DNI_CARLOS, null, "LUCIA", 200), c("GET", "/api/v1/routines/history/" + DNI_CARLOS, null, "ROSA", 403),
                 c("GET", "/api/v1/routines/history/" + DNI_CARLOS, null, "MARCO", 403), c("GET", "/api/v1/routines/history/" + DNI_CARLOS, null, "ANON", 401),
-                c("GET", "/api/v1/routines/history/" + DNI_UNLINKED, null, "CARLOS", 403), c("GET", "/api/v1/routines/history/" + DNI_UNLINKED, null, "ADMIN", 422),
+                c("GET", "/api/v1/routines/history/" + DNI_UNLINKED, null, "CARLOS", 403), c("GET", "/api/v1/routines/history/" + DNI_UNLINKED, null, "ADMIN", 404),
                 c("GET", "/api/v1/routines/by-email/" + CARLOS + "/history", null, "CARLOS", 200),
                 c("GET", "/api/v1/routines/by-email/CARLOS@X.COM/history", null, "CARLOS", 200),
                 c("GET", "/api/v1/routines/by-email/" + CARLOS + "/history", null, "ADMIN", 200),
@@ -304,13 +304,13 @@ class AccessMatrixTest {
                 c("POST", "/api/v1/access", "{\"dni\":\"" + DNI_LUCIA + "\"}", "LUCIA", 200),     // el entrenador registra el suyo
                 c("POST", "/api/v1/access", "{\"dni\":\"" + DNI_MARCO + "\"}", "LUCIA", 403),
                 c("POST", "/api/v1/access", "{\"dni\":\"" + DNI_UNLINKED + "\"}", "CARLOS", 403),
-                c("POST", "/api/v1/access", "{\"dni\":\"" + DNI_UNLINKED + "\"}", "ADMIN", 422),
+                c("POST", "/api/v1/access", "{\"dni\":\"" + DNI_UNLINKED + "\"}", "ADMIN", 404),
                 c("POST", "/api/v1/access", "{\"dni\":\"" + DNI_CARLOS + "\"}", "ANON", 401),
                 c("GET", "/api/v1/attendance/" + DNI_CARLOS, null, "CARLOS", 200), c("GET", "/api/v1/attendance/" + DNI_CARLOS, null, "ADMIN", 200),
                 c("GET", "/api/v1/attendance/" + DNI_CARLOS, null, "ROSA", 403), c("GET", "/api/v1/attendance/" + DNI_CARLOS, null, "LUCIA", 403),
                 c("GET", "/api/v1/attendance/" + DNI_CARLOS, null, "ANON", 401),
                 c("GET", "/api/v1/attendance/" + DNI_LUCIA, null, "LUCIA", 200),
-                c("GET", "/api/v1/attendance/" + DNI_UNLINKED, null, "CARLOS", 403), c("GET", "/api/v1/attendance/" + DNI_UNLINKED, null, "ADMIN", 422),
+                c("GET", "/api/v1/attendance/" + DNI_UNLINKED, null, "CARLOS", 403), c("GET", "/api/v1/attendance/" + DNI_UNLINKED, null, "ADMIN", 404),
                 // ---- admin sin claim email: los endpoints solo-admin no lo necesitan; los de datos propios tampoco (admin pasa antes)
                 c("GET", "/api/v1/customers/" + CARLOS, null, "ADMIN_NOEMAIL", 200),
                 c("GET", "/api/v1/bookings", null, "ADMIN_NOEMAIL", 200)

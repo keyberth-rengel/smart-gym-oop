@@ -1,5 +1,6 @@
 package com.smartgym.service;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.model.Booking;
 import com.smartgym.model.Customer;
 import com.smartgym.model.Trainer;
@@ -111,7 +112,7 @@ class TrainerCustomersQueryTest {
     void serviceListTrainerCustomersNormalizesEmailAndFailsForUnknownTrainer() {
         book(t1, a, D1, "10:00");
         assertEquals(1, service.listTrainerCustomers("  T1@X.com ").size());
-        assertThrows(IllegalArgumentException.class, () -> service.listTrainerCustomers("nadie@x.com"));
+        assertThrows(NotFoundException.class, () -> service.listTrainerCustomers("nadie@x.com"));
     }
 
     @Test
@@ -120,7 +121,7 @@ class TrainerCustomersQueryTest {
         book(t1, b, D1, "08:30");
         book(t1, c, D2, "12:00");
         assertEquals(List.of(LocalTime.of(8, 30), LocalTime.of(18, 0)), service.listBookedTimes("T1@x.com", D1));
-        assertThrows(IllegalArgumentException.class, () -> service.listBookedTimes("nadie@x.com", D1));
+        assertThrows(NotFoundException.class, () -> service.listBookedTimes("nadie@x.com", D1));
     }
 
     @Test

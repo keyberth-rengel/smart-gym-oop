@@ -1,5 +1,6 @@
 package com.smartgym.application;
 
+import com.smartgym.api.advice.NotFoundException;
 import com.smartgym.domain.AttendanceRecord;
 import com.smartgym.domain.PaymentMethod;
 import com.smartgym.domain.ProgressRecord;
@@ -73,7 +74,7 @@ public class GymExtensions {
     @Transactional
     public void setPayment(String customerEmail, PaymentMethod pm) {
         var customer = core.findCustomer(customerEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerEmail));
+                .orElseThrow(() -> new NotFoundException("Customer not found: " + customerEmail));
         customer.setPaymentMethod(pm);
         // Persistencia por dirty checking dentro de la transacción
     }
@@ -85,7 +86,7 @@ public class GymExtensions {
     @Transactional
     public Routine assignRandomRoutine(String customerEmail) {
         var customer = core.findCustomer(customerEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + customerEmail));
+                .orElseThrow(() -> new NotFoundException("Customer not found: " + customerEmail));
         Routine r = new Routine(customer, randomWeeklyPlan());
         return routineRepository.save(r);
     }
@@ -103,13 +104,13 @@ public class GymExtensions {
     public String accessByDni(String dni) {
         String key = normalize(dni);
         String email = emailByDni(key).orElse(null);
-        if (email == null) throw new IllegalArgumentException("DNI not linked");
+        if (email == null) throw new NotFoundException("DNI not linked");
 
         var roleOpt =
                 core.findCustomer(email).map(c -> AttendanceRecord.Role.CUSTOMER)
                         .or(() -> core.findTrainer(email).map(t -> AttendanceRecord.Role.TRAINER));
 
-        if (roleOpt.isEmpty()) throw new IllegalArgumentException("Identity not recognized for the linked email");
+        if (roleOpt.isEmpty()) throw new NotFoundException("Identity not recognized for the linked email");
         var role = roleOpt.get();
 
         attendanceRepository.save(new AttendanceRecord(email, role));
@@ -128,15 +129,15 @@ public class GymExtensions {
 
     @Transactional
     public void addProgressByDni(String dni, double weightKg, double bodyFatPct, double musclePct) {
-        String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
+        String email = emailByDni(dni).orElseThrow(() -> new NotFoundException("DNI not linked"));
         var customer = core.findCustomer(email)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + email));
+                .orElseThrow(() -> new NotFoundException("Customer not found: " + email));
         progressRepository.save(new ProgressRecord(customer, LocalDate.now(), weightKg, bodyFatPct, musclePct));
     }
 
     @Transactional(readOnly = true)
     public List<ProgressRecord> progressByDni(String dni) {
-        String email = emailByDni(dni).orElseThrow(() -> new IllegalArgumentException("DNI not linked"));
+        String email = emailByDni(dni).orElseThrow(() -> new NotFoundException("DNI not linked"));
         return progressRepository.findByCustomerEmailOrderByDateAsc(normalize(email));
     }
 
