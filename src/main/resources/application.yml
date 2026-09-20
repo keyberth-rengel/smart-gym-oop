@@ -13,6 +13,12 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${clerk.issuer}/.well-known/jwks.json
+
   datasource:
     url: jdbc:h2:file:./data/smartgymdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
@@ -31,6 +37,15 @@ spring:
 springdoc:
   api-docs:
     path: /v3/api-docs
+
+clerk:
+  # Instancia de Clerk que emite los session tokens (JWT). Se puede sobreescribir con CLERK_ISSUER.
+  issuer: https://brave-sawfish-4330.clerk.accounts.dev
+
+smartgym:
+  cors:
+    # Origenes permitidos separados por coma. Se puede sobreescribir con SMARTGYM_CORS_ALLOWED_ORIGINS.
+    allowed-origins: http://localhost:4200
 
 scalar:
   enabled: true

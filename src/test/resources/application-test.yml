@@ -1,0 +1,10 @@
+# Perfil de pruebas: BD en memoria aislada, sin seed (data.sql) y esquema recreado.
+spring:
+  datasource:
+    url: jdbc:h2:mem:smartgymtest;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  sql:
+    init:
+      mode: never

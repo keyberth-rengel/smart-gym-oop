@@ -1,9 +1,12 @@
 @host = http://localhost:8080
+# JWT (session token de Clerk). Obtenerlo desde el front: await Clerk.session.getToken() (dura ~60 s).
+@token = <pega-aqui-el-jwt>
 @today = {{$datetime 'yyyy-MM-dd'}}
 
 ###
 # Crear Customer
 POST {{host}}/api/v1/customers
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -15,11 +18,13 @@ Content-Type: application/json
 ###
 # Obtener Customer por email
 GET {{host}}/api/v1/customers/alice@example.com
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Crear Trainer
 POST {{host}}/api/v1/trainers
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -32,11 +37,13 @@ Content-Type: application/json
 ###
 # Obtener Trainer por email
 GET {{host}}/api/v1/trainers/coach.bob@example.com
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Linkear DNI a Customer
 POST {{host}}/api/v1/identity/customer
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -47,6 +54,7 @@ Content-Type: application/json
 ###
 # Linkear DNI a Trainer
 POST {{host}}/api/v1/identity/trainer
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -57,12 +65,14 @@ Content-Type: application/json
 ###
 # Resolver identidad por DNI (Customer)
 GET {{host}}/api/v1/identity/12345678
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Crear Booking (fecha fijada por el servidor = hoy)
 # Ajusta la hora si ya existe una reserva para ese trainer
 POST {{host}}/api/v1/bookings
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -75,16 +85,19 @@ Content-Type: application/json
 ###
 # Listar todas las Bookings
 GET {{host}}/api/v1/bookings
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Listar Bookings de un Trainer por fecha
 GET {{host}}/api/v1/trainers/coach.bob@example.com/bookings?date={{today}}
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Registrar acceso por DNI (Customer)
 POST {{host}}/api/v1/access
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -94,11 +107,13 @@ Content-Type: application/json
 ###
 # Listar asistencia por DNI (Customer)
 GET {{host}}/api/v1/attendance/12345678
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Agregar progreso (peso, % grasa, % músculo) para Customer por DNI
 POST {{host}}/api/v1/progress
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -111,11 +126,13 @@ Content-Type: application/json
 ###
 # Listar progreso por DNI
 GET {{host}}/api/v1/progress/12345678
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Asignar rutina semanal aleatoria al Customer por DNI
 POST {{host}}/api/v1/routines/assign
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -125,16 +142,19 @@ Content-Type: application/json
 ###
 # Historial de rutinas por DNI
 GET {{host}}/api/v1/routines/history/12345678
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Rutina activa para un día específico (ejemplo: monday)
 GET {{host}}/api/v1/routines/active/12345678?day=monday
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Caso negativo: Booking duplicada (mismo trainer/hoy/time) => 409 esperado
 POST {{host}}/api/v1/bookings
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -147,11 +167,13 @@ Content-Type: application/json
 ###
 # Caso negativo: DNI no linkeado en asistencia => 404/422 según validación
 GET {{host}}/api/v1/attendance/00000000
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
 # Caso negativo: Progreso con valores fuera de rango => 422
 POST {{host}}/api/v1/progress
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {

@@ -2,12 +2,15 @@ package com.smartgym.api.advice;
 
 import com.smartgym.api.common.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
+import com.smartgym.security.ForbiddenException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -156,6 +159,30 @@ public class ApiExceptionHandler {
                                                                  HttpServletRequest req) {
         return ResponseEntity.status(404).body(
                 ApiResponse.fail("NOT_FOUND", "Resource not found", null,
+                        Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<?>> handleForbidden(ForbiddenException ex, HttpServletRequest req) {
+        return ResponseEntity.status(403).body(
+                ApiResponse.fail("FORBIDDEN", ex.getMessage(), null,
+                        Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<?>> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
+        return ResponseEntity.status(403).body(
+                ApiResponse.fail("FORBIDDEN", "Access denied", null,
+                        Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<?>> handleAuthentication(AuthenticationException ex, HttpServletRequest req) {
+        return ResponseEntity.status(401).body(
+                ApiResponse.fail("UNAUTHORIZED", "Authentication required", null,
                         Instant.now().toString(), req.getRequestURI())
         );
     }

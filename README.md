@@ -77,6 +77,37 @@ La API queda disponible en:
 http://localhost:8080
 ```
 
+## Seguridad (Clerk + JWT)
+
+La API es un *resource server* OAuth2 stateless: valida el session token (JWT) que emite Clerk.
+No maneja usuarios ni contraseñas; el login y el registro los hace Clerk desde el frontend.
+
+- **Público:** `/api/v1/health`, `/docs`, `/v3/api-docs`, `/h2-console`. Todo lo demás de `/api/v1/**` exige `Authorization: Bearer <jwt>`.
+- **Validación:** firma con el JWKS de Clerk (`<issuer>/.well-known/jwks.json`), expiración y `iss`.
+- **Claims usados:** `role` (`cliente` | `entrenador` | `admin`; si falta o es desconocido se trata como `cliente`) y `email`. Se agregan en Clerk: *Sessions -> Customize session token*:
+
+```json
+{ "role": "{{user.public_metadata.role}}", "email": "{{user.primary_email_address}}" }
+```
+
+- **Errores:** 401 (`UNAUTHORIZED`, sin token o inválido) y 403 (`FORBIDDEN`) usan el mismo formato `ApiResponse`. Un token sin `email` produce 403 con el mensaje `The token does not include the email; configure the session token in Clerk`.
+- **CORS:** orígenes permitidos en `smartgym.cors.allowed-origins` (por defecto `http://localhost:4200`), métodos GET/POST/PUT/DELETE/OPTIONS, sin cookies.
+
+Propiedades (se sobreescriben con variables de entorno):
+
+| Propiedad | Variable | Valor por defecto |
+|---|---|---|
+| `clerk.issuer` | `CLERK_ISSUER` | `https://brave-sawfish-4330.clerk.accounts.dev` |
+| `smartgym.cors.allowed-origins` | `SMARTGYM_CORS_ALLOWED_ORIGINS` | `http://localhost:4200` |
+
+Llamar con token:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/customers/alice@example.com
+```
+
+Los tests usan el perfil `test` (BD en memoria, sin `data.sql`) y un `JwtDecoder` de prueba; no necesitan red ni Clerk.
+
 ## Documentacion OpenAPI
 
 - Scalar UI: `http://localhost:8080/docs`

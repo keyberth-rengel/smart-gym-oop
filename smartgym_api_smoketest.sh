@@ -11,6 +11,14 @@ set -o nounset
 set -o pipefail
 
 BASE="http://localhost:8080/api/v1"
+
+# La API exige un JWT de Clerk (excepto /health). Exporta TOKEN para enviarlo en todas las llamadas:
+#   TOKEN="<jwt>" ./smartgym_api_smoketest.sh
+# Nota: el session token de Clerk dura ~60 s; esta suite es larga, así que sin un token
+# de larga duración las últimas pruebas fallarán con 401.
+if [[ -n "${TOKEN:-}" ]]; then
+  curl() { command curl -H "Authorization: Bearer $TOKEN" "$@"; }
+fi
 JQ_EXISTS=$(command -v jq || true)
 USE_JQ=true
 if [[ -z "$JQ_EXISTS" ]]; then
