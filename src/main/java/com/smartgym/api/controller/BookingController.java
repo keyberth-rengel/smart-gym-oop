@@ -6,6 +6,7 @@ import com.smartgym.api.dto.BookingCreateRequest;
 import com.smartgym.api.dto.BookingResponse;
 import com.smartgym.model.Booking;
 import com.smartgym.security.AccessGuard;
+import com.smartgym.security.CurrentUser;
 import com.smartgym.service.SmartGymService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
@@ -30,13 +31,16 @@ public class BookingController {
 
     private final SmartGymService service;
     private final AccessGuard access;
+    private final CurrentUser user;
 
-    public BookingController(SmartGymService service, AccessGuard access) {
+    public BookingController(SmartGymService service, AccessGuard access, CurrentUser user) {
         this.service = service;
         this.access = access;
+        this.user = user;
     }
 
-    @Operation(summary = "Create a booking")
+    @Operation(summary = "Create a booking",
+            description = "Customer: only for their own email. Admin: any customer. Trainer: 403.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -48,6 +52,7 @@ public class BookingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping("/bookings")
     public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody BookingCreateRequest req, HttpServletRequest http) {
+        access.requireBookingFor(req.customerEmail());
                 var time = LocalTime.parse(req.time());
         Booking b = (req.note() == null || req.note().isBlank())
                 ? service.createBookingToday(req.customerEmail(), req.trainerEmail(), time)
@@ -66,13 +71,17 @@ public class BookingController {
         );
     }
 
-    @Operation(summary = "List all bookings")
+    @Operation(summary = "List bookings",
+            description = "Admin: all bookings. Trainer: only their own. Customer: only their own.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "OK",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @GetMapping("/bookings")
     public ResponseEntity<ApiResponse<List<BookingResponse>>> listAll(HttpServletRequest http) {
-        var list = service.listBookings().stream().map(this::toResponse).toList();
+        var source = user.isAdmin() ? service.listBookings()
+                : user.isTrainer() ? service.listBookingsForTrainer(user.email())
+                : service.listBookingsForCustomer(user.email());
+        var list = source.stream().map(this::toResponse).toList();
         return ResponseEntity.ok(
                 ApiResponse.ok(list, "All bookings retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
         );
@@ -131,13 +140,14 @@ public class BookingController {
         );
     }
 
-    @Operation(summary = "Cancel booking by id")
+    @Operation(summary = "Cancel booking by id (admin only)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "No content")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404", description = "Not found",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
         @DeleteMapping("/bookings/{id}")
         public ResponseEntity<Void> delete(@PathVariable long id) {
+                access.requireAdmin();
                 service.cancelBooking(id);
                 return ResponseEntity.noContent().build(); // 204 sin contenido según convención REST
         }

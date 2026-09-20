@@ -57,12 +57,17 @@ class SecurityIntegrationTest {
 
     @Test
     void everyRoleReachesTheController() throws Exception {
-        // El cliente no existe: llega al controlador (422 del backend), no se queda en 401/403.
-        for (String role : new String[]{"cliente", "entrenador", "admin", null, "desconocido"}) {
+        // El usuario consulta su propio correo (que no existe como cliente): admin, cliente, sin claim y rol desconocido
+        // pasan la regla de acceso y llegan al controlador (422 del backend, no 401/403). Un entrenador sin reservas con
+        // ese cliente recibe 403 por regla de negocio, no por falta de token.
+        for (String role : new String[]{"cliente", "admin", null, "desconocido"}) {
             mvc.perform(get("/api/v1/customers/nobody@example.com")
-                            .header("Authorization", "Bearer " + token(role, "u@example.com")))
+                            .header("Authorization", "Bearer " + token(role, "nobody@example.com")))
                     .andExpect(status().isUnprocessableEntity());
         }
+        mvc.perform(get("/api/v1/customers/nobody@example.com")
+                        .header("Authorization", "Bearer " + token("entrenador", "coach@example.com")))
+                .andExpect(status().isForbidden());
     }
 
     @Test

@@ -190,5 +190,19 @@ public class SmartGymService {
     @Transactional(readOnly = true)
     public List<Booking> listBookings() { return bookingRepository.findAll(); }
 
+    /** Reservas de un cliente por fecha y hora. */
+    @Transactional(readOnly = true)
+    public List<Booking> listBookingsForCustomer(String customerEmail) {
+        String key = normalize(customerEmail);
+        return key == null ? List.of() : bookingRepository.findByCustomer_EmailOrderBySchedule_DateAscSchedule_TimeAsc(key);
+    }
+
+    /** Reservas de un entrenador por fecha y hora. */
+    @Transactional(readOnly = true)
+    public List<Booking> listBookingsForTrainer(String trainerEmail) {
+        String key = normalize(trainerEmail);
+        return key == null ? List.of() : bookingRepository.findByTrainer_EmailOrderBySchedule_DateAscSchedule_TimeAsc(key);
+    }
+
     private String normalize(String email) { return (email == null) ? null : email.toLowerCase().trim(); }
 }

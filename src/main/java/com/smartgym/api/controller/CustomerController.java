@@ -5,6 +5,7 @@ import com.smartgym.api.dto.CustomerDto;
 import com.smartgym.api.dto.CustomerSummary;
 import com.smartgym.application.GymExtensions;
 import com.smartgym.model.Customer;
+import com.smartgym.security.AccessGuard;
 import com.smartgym.service.SmartGymService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,13 +26,15 @@ public class CustomerController {
 
         private final SmartGymService service;
         private final GymExtensions ext;
+        private final AccessGuard access;
 
-        public CustomerController(SmartGymService service, GymExtensions ext) {
+        public CustomerController(SmartGymService service, GymExtensions ext, AccessGuard access) {
                 this.service = service;
                 this.ext = ext;
+                this.access = access;
         }
 
-    @Operation(summary = "Create customer")
+    @Operation(summary = "Create customer (admin only)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -41,11 +44,12 @@ public class CustomerController {
     @PostMapping
         public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody CustomerDto dto,
                                                                                                  jakarta.servlet.http.HttpServletRequest req) {
+                access.requireAdmin();
                 var created = new Customer(dto.email(), dto.name(), dto.age());
                 service.addCustomer(created); // Servicio maneja duplicados y validaciones
         return org.springframework.http.ResponseEntity.status(201).body(
                 com.smartgym.api.common.ApiResponse.ok(
-                        created, "Customer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
+                        new CustomerSummary(created.getEmail(), created.getName(), created.getAge()), "Customer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
                 )
         );
     }
@@ -67,7 +71,8 @@ public class CustomerController {
         );
     }
 
-    @Operation(summary = "Get customer by email")
+    @Operation(summary = "Get customer by email",
+            description = "Admin: any. Customer: only their own. Trainer: only customers with a booking with them.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "OK",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -76,14 +81,16 @@ public class CustomerController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @GetMapping("/{email}")
     public ResponseEntity<ApiResponse<?>> get(@PathVariable String email, HttpServletRequest req) {
+        access.requireCustomerDataByEmail(email);
         var c = service.findCustomer(email)
                 .orElseThrow(() -> new IllegalArgumentException("Customer not found: " + email));
         return ResponseEntity.ok(
-                ApiResponse.ok(c, "Customer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
+                ApiResponse.ok(new CustomerSummary(c.getEmail(), c.getName(), c.getAge()), "Customer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 
-    @Operation(summary = "Get customer by DNI")
+    @Operation(summary = "Get customer by DNI",
+            description = "Same access rules as get by email.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "OK",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -92,6 +99,7 @@ public class CustomerController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @GetMapping("/by-dni/{dni}")
     public ResponseEntity<ApiResponse<?>> getByDni(@PathVariable String dni, HttpServletRequest req) {
+        access.requireCustomerDataByDni(dni);
         var emailOpt = ext.emailByDni(dni);
         if (emailOpt.isEmpty()) {
             return ResponseEntity.status(404).body(
@@ -102,7 +110,7 @@ public class CustomerController {
         var c = service.findCustomer(emailOpt.get())
                 .orElseThrow(() -> new IllegalArgumentException("Customer not found for DNI: " + dni));
         return ResponseEntity.ok(
-                ApiResponse.ok(c, "Customer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
+                ApiResponse.ok(new CustomerSummary(c.getEmail(), c.getName(), c.getAge()), "Customer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 }

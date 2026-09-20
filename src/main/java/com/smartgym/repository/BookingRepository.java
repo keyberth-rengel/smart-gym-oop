@@ -34,6 +34,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     List<TrainerCustomerRow> findTrainerCustomers(@Param("trainerEmail") String trainerEmail);
 
+    /** ¿Existe al menos una reserva entre el entrenador y el cliente? (relación "cliente del entrenador"). */
+    boolean existsByTrainer_EmailAndCustomer_Email(String trainerEmail, String customerEmail);
+
+    List<Booking> findByTrainer_EmailOrderBySchedule_DateAscSchedule_TimeAsc(String trainerEmail);
+
+    List<Booking> findByCustomer_EmailOrderBySchedule_DateAscSchedule_TimeAsc(String customerEmail);
+
     boolean existsByTrainer_EmailAndSchedule_DateAndSchedule_Time(String trainerEmail, LocalDate date, LocalTime time);
     boolean existsByCustomer_EmailAndTrainer_EmailAndSchedule_DateAndSchedule_Time(String customerEmail, String trainerEmail, LocalDate date, LocalTime time);
 }

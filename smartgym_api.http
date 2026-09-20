@@ -21,7 +21,7 @@ Content-Type: application/json
 }
 
 ###
-# Crear Customer
+# Crear Customer (solo admin)
 POST {{host}}/api/v1/customers
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -39,13 +39,13 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Obtener Customer por email
+# Obtener Customer por email (admin, el propio cliente o su entrenador)
 GET {{host}}/api/v1/customers/alice@example.com
 Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Crear Trainer
+# Crear Trainer (solo admin)
 POST {{host}}/api/v1/trainers
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -70,7 +70,7 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Linkear DNI a Customer
+# Linkear DNI a Customer (solo admin)
 POST {{host}}/api/v1/identity/customer
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -81,7 +81,7 @@ Content-Type: application/json
 }
 
 ###
-# Linkear DNI a Trainer
+# Linkear DNI a Trainer (solo admin)
 POST {{host}}/api/v1/identity/trainer
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -92,13 +92,13 @@ Content-Type: application/json
 }
 
 ###
-# Resolver identidad por DNI (Customer)
+# Resolver identidad por DNI (admin o el dueño del DNI)
 GET {{host}}/api/v1/identity/12345678
 Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Crear Booking (fecha fijada por el servidor = hoy)
+# Crear Booking (fecha fijada por el servidor = hoy). Cliente: solo a su nombre; admin: cualquiera; entrenador: 403
 # Ajusta la hora si ya existe una reserva para ese trainer
 POST {{host}}/api/v1/bookings
 Authorization: Bearer {{token}}
@@ -112,7 +112,7 @@ Content-Type: application/json
 }
 
 ###
-# Listar todas las Bookings
+# Listar Bookings (admin: todas; entrenador y cliente: solo las suyas)
 GET {{host}}/api/v1/bookings
 Authorization: Bearer {{token}}
 Accept: application/json
@@ -183,7 +183,7 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Asignar rutina semanal aleatoria al Customer por DNI
+# Asignar rutina semanal aleatoria al Customer por DNI (admin: cualquiera; entrenador: solo sus clientes)
 POST {{host}}/api/v1/routines/assign
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -193,7 +193,7 @@ Content-Type: application/json
 }
 
 ###
-# Historial de rutinas por DNI
+# Historial de rutinas por DNI (dueño, su entrenador o admin)
 GET {{host}}/api/v1/routines/history/12345678
 Authorization: Bearer {{token}}
 Accept: application/json
@@ -203,6 +203,29 @@ Accept: application/json
 GET {{host}}/api/v1/routines/active/12345678?day=monday
 Authorization: Bearer {{token}}
 Accept: application/json
+
+###
+# Asignar rutina semanal por correo del cliente (se envía dni O customer_email, nunca ambos)
+POST {{host}}/api/v1/routines/assign
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "customer_email": "alice@example.com" }
+
+###
+# Historial de rutinas por correo (dueño, su entrenador o admin)
+GET {{host}}/api/v1/routines/by-email/alice@example.com/history
+Authorization: Bearer {{token}}
+
+###
+# Rutina activa por correo para un día
+GET {{host}}/api/v1/routines/by-email/alice@example.com/active?day=monday
+Authorization: Bearer {{token}}
+
+###
+# Progreso por correo (dueño, su entrenador o admin)
+GET {{host}}/api/v1/progress/by-email/alice@example.com
+Authorization: Bearer {{token}}
 
 ###
 # Caso negativo: Booking duplicada (mismo trainer/hoy/time) => 409 esperado

@@ -31,7 +31,7 @@ public class TrainerController {
         this.access = access;
     }
 
-    @Operation(summary = "Create trainer")
+    @Operation(summary = "Create trainer (admin only)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -41,6 +41,7 @@ public class TrainerController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody TrainerDto dto,
                                                  jakarta.servlet.http.HttpServletRequest req) {
+        access.requireAdmin();
         if (service.findTrainer(dto.email()).isPresent()) {
             throw new IllegalStateException("Trainer already exists: " + dto.email());
         }
@@ -48,7 +49,8 @@ public class TrainerController {
         service.addTrainer(created);
         return org.springframework.http.ResponseEntity.status(201).body(
                 com.smartgym.api.common.ApiResponse.ok(
-                        created, "Trainer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
+                        new TrainerDto(created.getEmail(), created.getName(), created.getAge(), created.getSpecialty()),
+                        "Trainer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
                 )
         );
     }
@@ -79,7 +81,8 @@ public class TrainerController {
         var t = service.findTrainer(email)
                 .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + email));
         return ResponseEntity.ok(
-                ApiResponse.ok(t, "Trainer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
+                ApiResponse.ok(new TrainerDto(t.getEmail(), t.getName(), t.getAge(), t.getSpecialty()),
+                        "Trainer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 

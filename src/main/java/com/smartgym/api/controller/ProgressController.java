@@ -4,6 +4,7 @@ import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.ProgressCreateRequest;
 import com.smartgym.api.dto.ProgressListResponse;
 import com.smartgym.application.GymExtensions;
+import com.smartgym.security.AccessGuard;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 
@@ -19,10 +20,15 @@ import org.springframework.web.bind.annotation.*;
 public class ProgressController {
 
     private final GymExtensions ext;
+    private final AccessGuard access;
 
-    public ProgressController(GymExtensions ext) { this.ext = ext; }
+    public ProgressController(GymExtensions ext, AccessGuard access) {
+        this.ext = ext;
+        this.access = access;
+    }
 
-    @Operation(summary = "Add progress for customer by DNI (today's date)")
+    @Operation(summary = "Add progress for customer by DNI (today's date)",
+            description = "Customer: only their own DNI. Admin: any. Trainer: 403.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -32,6 +38,7 @@ public class ProgressController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> add(@Valid @RequestBody ProgressCreateRequest req,
                                               jakarta.servlet.http.HttpServletRequest http) {
+        access.requireCustomerWriteByDni(req.getDni());
         validateRanges(req);
         ext.addProgressByDni(req.getDni(), req.getWeightKg(), req.getBodyFatPct(), req.getMusclePct());
         var list = ext.progressByDni(req.getDni());
@@ -51,30 +58,35 @@ public class ProgressController {
         );
     }
 
-    @Operation(summary = "List progress by DNI (with totals and averages)")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", description = "OK",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "404", description = "DNI not linked",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @Operation(summary = "List progress by DNI (with totals and averages)",
+            description = "Admin: any. Customer: only their own. Trainer: only customers with a booking with them.")
     @GetMapping("/{dni}")
     public ResponseEntity<ApiResponse<ProgressListResponse>> list(@PathVariable String dni,
                                                                   jakarta.servlet.http.HttpServletRequest http) {
-        var list = ext.progressByDni(dni);
+        access.requireCustomerDataByDni(dni);
+        return listResponse(ext.progressByDni(dni), http);
+    }
 
+    @Operation(summary = "List progress by customer email (with totals and averages)",
+            description = "Same response and access rules as the DNI variant.")
+    @GetMapping("/by-email/{email}")
+    public ResponseEntity<ApiResponse<ProgressListResponse>> listByEmail(@PathVariable String email,
+                                                                         jakarta.servlet.http.HttpServletRequest http) {
+        access.requireCustomerDataByEmail(email);
+        return listResponse(ext.progressByEmail(email), http);
+    }
+
+    private ResponseEntity<ApiResponse<ProgressListResponse>> listResponse(
+            java.util.List<com.smartgym.domain.ProgressRecord> list, jakarta.servlet.http.HttpServletRequest http) {
         java.util.List<com.smartgym.api.dto.ProgressItemResponse> items = list.stream()
                 .map(p -> new com.smartgym.api.dto.ProgressItemResponse(
                         p.getDate(), p.getWeightKg(), p.getBodyFatPct(), p.getMusclePct()
                 ))
                 .toList();
-
         double avgW  = list.stream().mapToDouble(com.smartgym.domain.ProgressRecord::getWeightKg).average().orElse(0);
         double avgBF = list.stream().mapToDouble(com.smartgym.domain.ProgressRecord::getBodyFatPct).average().orElse(0);
         double avgM  = list.stream().mapToDouble(com.smartgym.domain.ProgressRecord::getMusclePct).average().orElse(0);
-
         var payload = new com.smartgym.api.dto.ProgressListResponse(items, items.size(), avgW, avgBF, avgM);
-
         return org.springframework.http.ResponseEntity.ok(
                 com.smartgym.api.common.ApiResponse.ok(
                         payload,

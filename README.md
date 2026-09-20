@@ -100,6 +100,37 @@ Propiedades (se sobreescriben con variables de entorno):
 | `clerk.issuer` | `CLERK_ISSUER` | `https://brave-sawfish-4330.clerk.accounts.dev` |
 | `smartgym.cors.allowed-origins` | `SMARTGYM_CORS_ALLOWED_ORIGINS` | `http://localhost:4200` |
 
+### Autorización por rol
+
+Además de exigir un token válido, cada endpoint aplica reglas por rol. Las reglas se evalúan **antes** de mirar si el recurso existe: para un usuario sin permiso, un recurso ajeno y uno inexistente responden el mismo `403`, así no se filtra qué datos existen.
+
+- **Dueño:** el correo del recurso (o el correo vinculado al DNI) es el del token.
+- **Cliente del entrenador:** existe al menos una reserva entre ambos.
+- Los correos se comparan sin distinguir mayúsculas.
+
+| Endpoint | Admin | Cliente | Entrenador |
+|---|---|---|---|
+| `GET /bookings` | todas | solo las suyas | solo las suyas |
+| `POST /bookings` | cualquier cliente | solo a su nombre | 403 |
+| `DELETE /bookings/{id}` | sí | 403 | 403 |
+| `POST /customers`, `POST /trainers` | sí | 403 | 403 |
+| `GET /customers` | sí | 403 | 403 |
+| `GET /customers/{email}`, `GET /customers/by-dni/{dni}` | sí | solo el suyo | solo sus clientes |
+| `GET /trainers`, `GET /trainers/{email}`, `GET /trainers/{email}/availability` | sí | sí | sí |
+| `GET /trainers/{email}/customers`, `GET /trainers/{email}/bookings` | sí | 403 | solo el suyo |
+| `POST /identity/customer`, `POST /identity/trainer` | sí | 403 | 403 |
+| `GET /identity/{dni}` | sí | solo su DNI | solo su DNI |
+| `POST /progress` | cualquier DNI | solo su DNI | 403 |
+| `GET /progress/{dni}`, `GET /progress/by-email/{email}` | sí | solo el suyo | solo sus clientes |
+| `POST /routines/assign` | cualquier cliente | 403 | solo sus clientes |
+| `GET /routines/history/{dni}`, `/routines/active/{dni}` y sus variantes `/routines/by-email/{email}/...` | sí | solo el suyo | solo sus clientes |
+| `POST /access` | cualquier DNI | solo su DNI | solo su DNI |
+| `GET /attendance/{dni}` | sí | solo su DNI | solo su DNI |
+| `POST /me/onboarding` | 403 | sí | 403 |
+| `GET /me`, `GET /health` | sí | sí | sí (`/health` es público) |
+
+Las respuestas de cliente y entrenador son DTO (`email`, `name`, `age` y, en entrenador, `specialty`); nunca incluyen datos de pago ni el historial de reservas.
+
 Llamar con token:
 
 ```bash
@@ -231,7 +262,7 @@ http://localhost:8080/api/v1
 
 ### Clientes
 
-Crear cliente:
+Crear cliente (solo `admin`; la respuesta es `email`, `name`, `age`):
 
 ```http
 POST /customers
@@ -250,7 +281,7 @@ Listar clientes (solo rol `admin`; ordenados por nombre; devuelve `email`, `name
 GET /customers
 ```
 
-Consultar cliente por email:
+Consultar cliente por email (admin, el propio cliente o su entrenador; ver la matriz de autorización):
 
 ```http
 GET /customers/{email}
@@ -464,7 +495,7 @@ GET /attendance/{dni}
 
 ### Rutinas
 
-Asignar rutina:
+Asignar rutina (se envía **exactamente uno** de `dni` o `customer_email`; ninguno o ambos responde `400` con un error en cada campo; los valores vacíos cuentan como ausentes). El entrenador conoce correos y no DNI, por eso existen ambas formas:
 
 ```http
 POST /routines/assign
@@ -472,6 +503,15 @@ Content-Type: application/json
 
 {
   "dni": "11111111"
+}
+```
+
+```http
+POST /routines/assign
+Content-Type: application/json
+
+{
+  "customer_email": "ana@example.com"
 }
 ```
 
@@ -487,6 +527,13 @@ Consultar historial:
 
 ```http
 GET /routines/history/{dni}
+```
+
+Variantes por correo del cliente (misma respuesta y mismas reglas de acceso; pensadas para el entrenador):
+
+```http
+GET /routines/by-email/{email}/history
+GET /routines/by-email/{email}/active?day=monday
 ```
 
 ### Progreso
@@ -509,6 +556,7 @@ Consultar historial de progreso:
 
 ```http
 GET /progress/{dni}
+GET /progress/by-email/{email}
 ```
 
 La respuesta incluye:

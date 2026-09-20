@@ -35,9 +35,18 @@ class MeControllerTest {
     @Autowired CustomerRepository customers;
     @Autowired TrainerRepository trainers;
     @Autowired IdentityLinkRepository links;
+    @Autowired BookingRepository bookings;
+    @Autowired RoutineRepository routines;
+    @Autowired ProgressRecordRepository progress;
+    @Autowired AttendanceRecordRepository attendance;
 
     @BeforeEach
     void clean() {
+        // La BD en memoria se comparte entre clases de test: limpiar primero lo que depende de los clientes.
+        attendance.deleteAll();
+        progress.deleteAll();
+        routines.deleteAll();
+        bookings.deleteAll();
         links.deleteAll();
         customers.deleteAll();
         trainers.deleteAll();

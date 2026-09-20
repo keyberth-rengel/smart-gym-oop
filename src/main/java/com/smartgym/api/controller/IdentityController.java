@@ -3,6 +3,7 @@ package com.smartgym.api.controller;
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.IdentityLinkRequest;
 import com.smartgym.application.GymExtensions;
+import com.smartgym.security.AccessGuard;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
 
@@ -20,16 +21,21 @@ import jakarta.servlet.http.HttpServletRequest;
 public class IdentityController {
 
     private final GymExtensions ext;
+    private final AccessGuard access;
 
-    public IdentityController(GymExtensions ext) { this.ext = ext; }
+    public IdentityController(GymExtensions ext, AccessGuard access) {
+        this.ext = ext;
+        this.access = access;
+    }
 
-    @Operation(summary = "Link customer DNI to email")
+    @Operation(summary = "Link customer DNI to email (admin only)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Linked",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping("/customer")
     public ResponseEntity<ApiResponse<?>> linkCustomer(@Valid @RequestBody IdentityLinkRequest req,
                                                        jakarta.servlet.http.HttpServletRequest http) {
+        access.requireAdmin();
         ext.registerCustomerIdentity(req.dni(), req.email());
         var payload = java.util.Map.of("dni", req.dni(), "email", req.email());
         return org.springframework.http.ResponseEntity.status(201).body(
@@ -38,13 +44,14 @@ public class IdentityController {
         );
     }
 
-    @Operation(summary = "Link trainer DNI to email")
+    @Operation(summary = "Link trainer DNI to email (admin only)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Linked",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping("/trainer")
     public ResponseEntity<ApiResponse<?>> linkTrainer(@Valid @RequestBody IdentityLinkRequest req,
                                                       jakarta.servlet.http.HttpServletRequest http) {
+        access.requireAdmin();
         ext.registerTrainerIdentity(req.dni(), req.email());
         var payload = java.util.Map.of("dni", req.dni(), "email", req.email());
         return org.springframework.http.ResponseEntity.status(201).body(
@@ -53,7 +60,7 @@ public class IdentityController {
         );
     }
 
-    @Operation(summary = "Resolve identity by DNI")
+    @Operation(summary = "Resolve identity by DNI (admin or the DNI's owner)")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "OK",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -62,6 +69,7 @@ public class IdentityController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @GetMapping("/{dni}")
     public ResponseEntity<ApiResponse<?>> resolve(@PathVariable String dni, jakarta.servlet.http.HttpServletRequest http) {
+        access.requireOwnDniOrAdmin(dni);
         var emailOpt = ext.emailByDni(dni);
         if (emailOpt.isEmpty()) {
             return ResponseEntity.status(404).body(

@@ -140,6 +140,11 @@ public class GymExtensions {
         return progressRepository.findByCustomerEmailOrderByDateAsc(normalize(email));
     }
 
+    @Transactional(readOnly = true)
+    public List<ProgressRecord> progressByEmail(String email) {
+        return progressRepository.findByCustomerEmailOrderByDateAsc(normalize(email));
+    }
+
     private Map<DayOfWeek, String> randomWeeklyPlan() {
         List<String> blocks = new ArrayList<>(List.of("Legs", "Chest", "Back", "Shoulders", "Arms", "Cardio"));
         Collections.shuffle(blocks);
