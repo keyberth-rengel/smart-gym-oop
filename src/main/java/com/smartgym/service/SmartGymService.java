@@ -4,6 +4,7 @@ import com.smartgym.model.Booking;
 import com.smartgym.model.Customer;
 import com.smartgym.model.Trainer;
 import com.smartgym.repository.CustomerRepository;
+import com.smartgym.repository.TrainerCustomerRow;
 import com.smartgym.repository.TrainerRepository;
 import com.smartgym.repository.BookingRepository;
 import org.springframework.stereotype.Service;
@@ -144,6 +145,37 @@ public class SmartGymService {
         List<Booking> result = bookingRepository.findByTrainer_EmailAndSchedule_Date(key, date);
         result.sort(Comparator.comparing(b -> b.getSchedule().getTime()));
         return result;
+    }
+
+    /** Reservas del entrenador entre {@code from} y {@code to} (inclusivos; null = sin límite), por fecha y hora. */
+    @Transactional(readOnly = true)
+    public List<Booking> listTrainerBookings(String trainerEmail, LocalDate from, LocalDate to) {
+        String key = normalize(trainerEmail);
+        if (key == null) return List.of();
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new IllegalArgumentException("'from' must not be after 'to'.");
+        }
+        return bookingRepository.findByTrainer_EmailAndSchedule_DateBetweenOrderBySchedule_DateAscSchedule_TimeAsc(
+                key, from != null ? from : LocalDate.of(1900, 1, 1), to != null ? to : LocalDate.of(9999, 12, 31));
+    }
+
+    /** Clientes con al menos una reserva con el entrenador, con su total y su reserva más reciente. */
+    @Transactional(readOnly = true)
+    public List<TrainerCustomerRow> listTrainerCustomers(String trainerEmail) {
+        Trainer trainer = findTrainer(trainerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + trainerEmail));
+        return bookingRepository.findTrainerCustomers(trainer.getEmail());
+    }
+
+    /** Horas ocupadas del entrenador en una fecha (solo horas, sin datos personales). */
+    @Transactional(readOnly = true)
+    public List<LocalTime> listBookedTimes(String trainerEmail, LocalDate date) {
+        Trainer trainer = findTrainer(trainerEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + trainerEmail));
+        return bookingRepository.findByTrainer_EmailAndSchedule_Date(trainer.getEmail(), date).stream()
+                .map(b -> b.getSchedule().getTime())
+                .sorted()
+                .toList();
     }
 
     @Transactional

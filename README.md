@@ -290,6 +290,18 @@ Consultar entrenador por email:
 GET /trainers/{email}
 ```
 
+Clientes de un entrenador (admin: cualquiera; entrenador: solo los suyos; cliente: 403). Devuelve los clientes
+distintos con al menos una reserva, con su total de reservas y la mas reciente, de la mas reciente a la mas antigua:
+
+```http
+GET /trainers/{email}/customers
+```
+
+```json
+{ "data": [ { "email": "carlos@example.com", "name": "Carlos Mendoza", "age": 28, "sessions": 4,
+              "last_booking_date": "2026-09-18", "last_booking_time": "17:30" } ] }
+```
+
 ### Usuario actual (`/me`)
 
 El rol y el correo salen del token de Clerk (ver *Seguridad*). Solo los clientes pueden hacer onboarding.
@@ -402,10 +414,25 @@ Listar reservas:
 GET /bookings
 ```
 
-Listar reservas de un entrenador por fecha:
+Listar reservas de un entrenador (admin: cualquiera; entrenador: solo las suyas; cliente: 403):
 
 ```http
-GET /trainers/{email}/bookings?date=2026-09-06
+GET /trainers/{email}/bookings                          # todas, por fecha y hora
+GET /trainers/{email}/bookings?date=2026-09-06          # un dia (tiene prioridad)
+GET /trainers/{email}/bookings?from=2026-09-01&to=2026-09-30   # rango inclusivo; cada limite es opcional
+```
+
+`from` posterior a `to` responde `422`; un formato de fecha invalido responde `400`.
+
+Disponibilidad de un entrenador (cualquier usuario autenticado; solo horas ocupadas, sin datos personales;
+`date` por defecto es hoy). Los clientes usan este endpoint para mostrar los horarios libres:
+
+```http
+GET /trainers/{email}/availability?date=2026-09-06
+```
+
+```json
+{ "data": { "date": "2026-09-06", "booked_times": ["09:30", "18:00"] } }
 ```
 
 Cancelar reserva:

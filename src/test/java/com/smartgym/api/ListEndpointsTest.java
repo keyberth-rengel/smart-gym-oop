@@ -7,6 +7,7 @@ import com.smartgym.repository.BookingRepository;
 import com.smartgym.repository.CustomerRepository;
 import com.smartgym.repository.TrainerRepository;
 import com.smartgym.security.TestJwtDecoderConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,14 @@ class ListEndpointsTest {
     }
 
     // ---------- GET /trainers ----------
+
+    /** La BD en memoria es compartida entre clases de test: no dejar datos que rompan otras limpiezas. */
+    @AfterEach
+    void cleanUp() {
+        bookings.deleteAll();
+        customers.deleteAll();
+        trainers.deleteAll();
+    }
 
     @Test
     void trainersWithoutTokenIs401() throws Exception {

@@ -124,6 +124,30 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
+# Listar todas las Bookings de un Trainer (admin o el propio entrenador)
+GET {{host}}/api/v1/trainers/coach.bob@example.com/bookings
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+# Listar Bookings de un Trainer en un rango (from/to inclusivos y opcionales)
+GET {{host}}/api/v1/trainers/coach.bob@example.com/bookings?from=2026-09-01&to=2026-09-30
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+# Disponibilidad de un Trainer (horas ocupadas; cualquier usuario autenticado; date opcional, por defecto hoy)
+GET {{host}}/api/v1/trainers/coach.bob@example.com/availability?date={{today}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+# Clientes de un Trainer (admin o el propio entrenador)
+GET {{host}}/api/v1/trainers/coach.bob@example.com/customers
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
 # Registrar acceso por DNI (Customer)
 POST {{host}}/api/v1/access
 Authorization: Bearer {{token}}

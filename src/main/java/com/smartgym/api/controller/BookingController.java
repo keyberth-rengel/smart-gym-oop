@@ -1,9 +1,11 @@
 package com.smartgym.api.controller;
 
 import com.smartgym.api.common.ApiResponse;
+import com.smartgym.api.dto.AvailabilityResponse;
 import com.smartgym.api.dto.BookingCreateRequest;
 import com.smartgym.api.dto.BookingResponse;
 import com.smartgym.model.Booking;
+import com.smartgym.security.AccessGuard;
 import com.smartgym.service.SmartGymService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Bookings")
@@ -26,8 +29,12 @@ import java.util.List;
 public class BookingController {
 
     private final SmartGymService service;
+    private final AccessGuard access;
 
-    public BookingController(SmartGymService service) { this.service = service; }
+    public BookingController(SmartGymService service, AccessGuard access) {
+        this.service = service;
+        this.access = access;
+    }
 
     @Operation(summary = "Create a booking")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -71,18 +78,56 @@ public class BookingController {
         );
     }
 
-    @Operation(summary = "List trainer bookings by date")
+    @Operation(summary = "List trainer bookings",
+            description = "Optional filters: `date` (a single day; takes precedence) or `from`/`to` (inclusive range). "
+                    + "Without parameters returns all of the trainer's bookings, ordered by date and time. "
+                    + "Admin: any trainer. Trainer: only their own. Customers: 403 (use /availability).")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200", description = "OK",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "Not allowed to see this trainer's bookings",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "422", description = "`from` is after `to`",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @GetMapping("/trainers/{email}/bookings")
-    public ResponseEntity<ApiResponse<List<BookingResponse>>> listByTrainerAndDate(
+    public ResponseEntity<ApiResponse<List<BookingResponse>>> listByTrainer(
             @PathVariable String email,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             HttpServletRequest http) {
-        var list = service.listTrainerBookings(email, date).stream().map(this::toResponse).toList();
+        access.requireTrainerScope(email);
+        var bookings = (date != null)
+                ? service.listTrainerBookings(email, date)
+                : service.listTrainerBookings(email, from, to);
+        var list = bookings.stream().map(this::toResponse).toList();
         return ResponseEntity.ok(
-                ApiResponse.ok(list, "Trainer bookings for the given date retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
+                ApiResponse.ok(list, "Trainer bookings retrieved successfully", java.time.Instant.now().toString(), http.getRequestURI())
+        );
+    }
+
+    @Operation(summary = "Trainer availability for a date",
+            description = "Occupied times only (HH:mm), no personal data. Any authenticated user. `date` defaults to today.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "OK",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "422", description = "Trainer not found",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @GetMapping("/trainers/{email}/availability")
+    public ResponseEntity<ApiResponse<AvailabilityResponse>> availability(
+            @PathVariable String email,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            HttpServletRequest http) {
+        LocalDate day = (date != null) ? date : LocalDate.now();
+        var times = service.listBookedTimes(email, day).stream()
+                .map(t -> t.format(DateTimeFormatter.ofPattern("HH:mm")))
+                .toList();
+        return ResponseEntity.ok(
+                ApiResponse.ok(new AvailabilityResponse(day.toString(), times), "Trainer availability retrieved successfully",
+                        java.time.Instant.now().toString(), http.getRequestURI())
         );
     }
 

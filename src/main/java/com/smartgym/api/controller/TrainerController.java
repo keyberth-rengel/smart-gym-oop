@@ -1,9 +1,11 @@
 package com.smartgym.api.controller;
 
 import com.smartgym.api.common.ApiResponse;
+import com.smartgym.api.dto.TrainerCustomerItem;
 import com.smartgym.api.dto.TrainerDto;
 import java.util.List;
 import com.smartgym.model.Trainer;
+import com.smartgym.security.AccessGuard;
 import com.smartgym.service.SmartGymService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.*;
@@ -22,8 +24,12 @@ import jakarta.servlet.http.HttpServletRequest;
 public class TrainerController {
 
     private final SmartGymService service;
+    private final AccessGuard access;
 
-    public TrainerController(SmartGymService service) { this.service = service; }
+    public TrainerController(SmartGymService service, AccessGuard access) {
+        this.service = service;
+        this.access = access;
+    }
 
     @Operation(summary = "Create trainer")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -74,6 +80,30 @@ public class TrainerController {
                 .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + email));
         return ResponseEntity.ok(
                 ApiResponse.ok(t, "Trainer retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
+    @Operation(summary = "List a trainer's customers",
+            description = "Distinct customers with at least one booking with the trainer, with their number of sessions and "
+                    + "most recent booking, newest first. Admin: any trainer. Trainer: only their own. Customers: 403.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "OK",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "Not allowed to see this trainer's customers",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "422", description = "Trainer not found",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @GetMapping("/{email}/customers")
+    public ResponseEntity<ApiResponse<List<TrainerCustomerItem>>> customers(@PathVariable String email, HttpServletRequest req) {
+        access.requireTrainerScope(email);
+        var list = service.listTrainerCustomers(email).stream()
+                .map(r -> new TrainerCustomerItem(r.email(), r.name(), r.age(), r.sessions(),
+                        r.lastDate().toString(), r.lastTime().toString()))
+                .toList();
+        return ResponseEntity.ok(
+                ApiResponse.ok(list, "Trainer customers retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 }
