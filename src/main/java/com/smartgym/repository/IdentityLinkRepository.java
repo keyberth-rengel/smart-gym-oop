@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface IdentityLinkRepository extends JpaRepository<IdentityLink, String> {
     Optional<IdentityLink> findByDni(String dni);
+
+    Optional<IdentityLink> findFirstByEmailOrderByDniAsc(String email);
 }

@@ -45,7 +45,12 @@ public class GymExtensions {
         var value = normalize(email);
         identityLinkRepository.findById(key)
                 .ifPresentOrElse(
-                        il -> { il.setEmail(value); },
+                        il -> {
+                            // Un DNI ya vinculado a otro correo no se sobrescribe en silencio; mismo correo => idempotente.
+                            if (!il.getEmail().equals(value)) {
+                                throw new IllegalStateException("DNI already linked to another email: " + key);
+                            }
+                        },
                         () -> identityLinkRepository.save(new com.smartgym.domain.IdentityLink(key, value))
                 );
     }
@@ -54,6 +59,11 @@ public class GymExtensions {
     public void registerTrainerIdentity(String dni, String email) {
         // Igual que cliente; mapeo único por DNI
         registerCustomerIdentity(dni, email);
+    }
+
+    public Optional<String> dniByEmail(String email) {
+        return identityLinkRepository.findFirstByEmailOrderByDniAsc(normalize(email))
+                .map(com.smartgym.domain.IdentityLink::getDni);
     }
 
     public Optional<String> emailByDni(String dni) {

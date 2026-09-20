@@ -47,6 +47,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(publicPaths()).permitAll()
+                        // Solo los clientes completan su perfil (los entrenadores los crea el admin).
+                        .requestMatchers(PathPatternRequestMatcher.withDefaults()
+                                .matcher(HttpMethod.POST, "/api/v1/me/onboarding")).hasRole(Role.CLIENTE.name())
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(errors).accessDeniedHandler(errors))
                 .oauth2ResourceServer(o -> o

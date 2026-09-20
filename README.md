@@ -278,6 +278,45 @@ Consultar entrenador por email:
 GET /trainers/{email}
 ```
 
+### Usuario actual (`/me`)
+
+El rol y el correo salen del token de Clerk (ver *Seguridad*). Solo los clientes pueden hacer onboarding.
+
+```http
+GET /me
+Authorization: Bearer <jwt>
+```
+
+Respuesta (`data`):
+
+```json
+{
+  "role": "cliente",
+  "email": "carlos@example.com",
+  "name": "Carlos Mendoza",
+  "dni": "74582136",
+  "profile_complete": true,
+  "profile": { "email": "carlos@example.com", "name": "Carlos Mendoza", "age": 28 }
+}
+```
+
+- Cliente: `profile_complete` = existe el cliente **y** tiene un DNI vinculado. Entrenador: existe el entrenador (el perfil incluye `specialty`). Admin: siempre `true` y `profile` nulo. Los datos que faltan se devuelven como `null`.
+- Sin `email` en el token: 403 `The token does not include the email; configure the session token in Clerk`.
+
+Completar el perfil (crea el cliente y vincula el DNI en una sola transacción):
+
+```http
+POST /me/onboarding
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{ "name": "Carlos Mendoza", "age": 28, "dni": "74582136" }
+```
+
+- `201` si se creó el cliente o el vínculo; `200` si ya estaba todo igual (idempotente); mismo cuerpo que `GET /me`.
+- `409` si el DNI ya pertenece a otro correo, o si esta cuenta ya tiene otro DNI (no se crea nada).
+- `400` con `error.details` por campo (nombre sin `<>` y máx. 120, edad >= 0, DNI de 8 dígitos). `403` para entrenador y admin.
+
 ### Identidad
 
 Vincular DNI a cliente:
@@ -303,6 +342,8 @@ Content-Type: application/json
   "email": "coach@example.com"
 }
 ```
+
+Si el DNI ya está vinculado a **otro** correo responde `409` y no se sobrescribe; repetir el mismo vínculo es idempotente.
 
 Resolver DNI:
 

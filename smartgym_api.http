@@ -4,6 +4,23 @@
 @today = {{$datetime 'yyyy-MM-dd'}}
 
 ###
+# Usuario actual (rol, perfil, profile_complete). Requiere claims role y email en el token.
+GET {{host}}/api/v1/me
+Authorization: Bearer {{token}}
+
+###
+# Completar perfil de cliente (crea el cliente y vincula el DNI)
+POST {{host}}/api/v1/me/onboarding
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Carlos Mendoza",
+  "age": 28,
+  "dni": "74582136"
+}
+
+###
 # Crear Customer
 POST {{host}}/api/v1/customers
 Authorization: Bearer {{token}}
