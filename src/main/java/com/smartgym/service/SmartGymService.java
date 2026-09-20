@@ -65,6 +65,30 @@ public class SmartGymService {
         return (key == null) ? Optional.empty() : trainerRepository.findById(key);
     }
 
+    /** Entrenadores ordenados por nombre (sin distinguir mayúsculas ni acentos). */
+    @Transactional(readOnly = true)
+    public List<Trainer> listTrainers() {
+        return trainerRepository.findAll().stream()
+                .sorted(byName(Trainer::getName, Trainer::getEmail))
+                .toList();
+    }
+
+    /** Clientes ordenados por nombre (sin distinguir mayúsculas ni acentos). */
+    @Transactional(readOnly = true)
+    public List<Customer> listCustomers() {
+        return customerRepository.findAll().stream()
+                .sorted(byName(Customer::getName, Customer::getEmail))
+                .toList();
+    }
+
+    private static <T> Comparator<T> byName(java.util.function.Function<T, String> name,
+                                            java.util.function.Function<T, String> email) {
+        java.text.Collator collator = java.text.Collator.getInstance(java.util.Locale.forLanguageTag("es"));
+        collator.setStrength(java.text.Collator.PRIMARY);
+        return Comparator.<T, String>comparing(t -> name.apply(t) == null ? "" : name.apply(t), collator)
+                .thenComparing(email, Comparator.nullsFirst(Comparator.naturalOrder()));
+    }
+
     @Transactional
     public Booking createBooking(String customerEmail, String trainerEmail, LocalDate date, LocalTime time) {
         return createBooking(customerEmail, trainerEmail, date, time, null);

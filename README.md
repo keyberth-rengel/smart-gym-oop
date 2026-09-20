@@ -244,6 +244,12 @@ Content-Type: application/json
 }
 ```
 
+Listar clientes (solo rol `admin`; ordenados por nombre; devuelve `email`, `name`, `age` sin datos de pago ni historial):
+
+```http
+GET /customers
+```
+
 Consultar cliente por email:
 
 ```http
@@ -270,6 +276,12 @@ Content-Type: application/json
   "age": 35,
   "specialty": "Strength"
 }
+```
+
+Listar entrenadores (cualquier usuario autenticado; los clientes lo usan para reservar; ordenados por nombre; devuelve `email`, `name`, `age`, `specialty`):
+
+```http
+GET /trainers
 ```
 
 Consultar entrenador por email:

@@ -33,6 +33,12 @@ Content-Type: application/json
 }
 
 ###
+# Listar Customers (solo admin)
+GET {{host}}/api/v1/customers
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
 # Obtener Customer por email
 GET {{host}}/api/v1/customers/alice@example.com
 Authorization: Bearer {{token}}
@@ -50,6 +56,12 @@ Content-Type: application/json
   "age": 40,
   "specialty": "strength"
 }
+
+###
+# Listar Trainers (cualquier usuario autenticado)
+GET {{host}}/api/v1/trainers
+Authorization: Bearer {{token}}
+Accept: application/json
 
 ###
 # Obtener Trainer por email

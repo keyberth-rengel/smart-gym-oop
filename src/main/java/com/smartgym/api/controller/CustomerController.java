@@ -2,6 +2,7 @@ package com.smartgym.api.controller;
 
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.CustomerDto;
+import com.smartgym.api.dto.CustomerSummary;
 import com.smartgym.application.GymExtensions;
 import com.smartgym.model.Customer;
 import com.smartgym.service.SmartGymService;
@@ -46,6 +47,23 @@ public class CustomerController {
                 com.smartgym.api.common.ApiResponse.ok(
                         created, "Customer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
                 )
+        );
+    }
+
+    @Operation(summary = "List customers (admin only)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "OK",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "Admin role required",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @GetMapping
+    public ResponseEntity<ApiResponse<java.util.List<CustomerSummary>>> list(HttpServletRequest req) {
+        var list = service.listCustomers().stream()
+                .map(c -> new CustomerSummary(c.getEmail(), c.getName(), c.getAge()))
+                .toList();
+        return ResponseEntity.ok(
+                ApiResponse.ok(list, "Customers retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 

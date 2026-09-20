@@ -50,6 +50,9 @@ public class SecurityConfig {
                         // Solo los clientes completan su perfil (los entrenadores los crea el admin).
                         .requestMatchers(PathPatternRequestMatcher.withDefaults()
                                 .matcher(HttpMethod.POST, "/api/v1/me/onboarding")).hasRole(Role.CLIENTE.name())
+                        // El listado completo de clientes es solo para administración.
+                        .requestMatchers(PathPatternRequestMatcher.withDefaults()
+                                .matcher(HttpMethod.GET, "/api/v1/customers")).hasRole(Role.ADMIN.name())
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(errors).accessDeniedHandler(errors))
                 .oauth2ResourceServer(o -> o

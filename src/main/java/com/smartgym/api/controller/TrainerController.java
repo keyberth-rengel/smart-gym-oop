@@ -2,6 +2,7 @@ package com.smartgym.api.controller;
 
 import com.smartgym.api.common.ApiResponse;
 import com.smartgym.api.dto.TrainerDto;
+import java.util.List;
 import com.smartgym.model.Trainer;
 import com.smartgym.service.SmartGymService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,20 @@ public class TrainerController {
                 com.smartgym.api.common.ApiResponse.ok(
                         created, "Trainer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
                 )
+        );
+    }
+
+    @Operation(summary = "List trainers (any authenticated user; clients need it to book)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "OK",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<TrainerDto>>> list(HttpServletRequest req) {
+        var list = service.listTrainers().stream()
+                .map(t -> new TrainerDto(t.getEmail(), t.getName(), t.getAge(), t.getSpecialty()))
+                .toList();
+        return ResponseEntity.ok(
+                ApiResponse.ok(list, "Trainers retrieved successfully", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 
