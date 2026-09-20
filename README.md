@@ -99,6 +99,14 @@ Propiedades (se sobreescriben con variables de entorno):
 |---|---|---|
 | `clerk.issuer` | `CLERK_ISSUER` | `https://brave-sawfish-4330.clerk.accounts.dev` |
 | `smartgym.cors.allowed-origins` | `SMARTGYM_CORS_ALLOWED_ORIGINS` | `http://localhost:4200` |
+| `clerk.secret-key` | `CLERK_SECRET_KEY` | vacía (invitaciones desactivadas) |
+| `clerk.invitation-redirect-url` | `CLERK_INVITATION_REDIRECT_URL` | `http://localhost:4200/auth/sign-up` |
+| `clerk.api-base` | (fija) | `https://api.clerk.com` |
+
+**Invitar entrenadores (`CLERK_SECRET_KEY`).** La clave secreta de Clerk (`sk_...`, Dashboard de Clerk -> API keys) solo se usa
+en el backend para invitar entrenadores y nunca debe ir al repositorio ni al frontend: se pasa como variable de entorno
+(`CLERK_SECRET_KEY=sk_test_... ./mvnw spring-boot:run`). Sin la variable, el alta de entrenadores funciona igual y la
+invitacion se omite (`invitation.status = SKIPPED`). La clave no se escribe en logs ni en respuestas.
 
 ### Autorización por rol
 
@@ -262,7 +270,8 @@ http://localhost:8080/api/v1
 
 ### Clientes
 
-Crear cliente (solo `admin`; la respuesta es `email`, `name`, `age`):
+Crear cliente (solo `admin`; la respuesta es `email`, `name`, `age`). `dni` es opcional (8 digitos) y se vincula en la misma
+transaccion; un DNI de otro correo da 409 sin crear nada. No se invita a nadie (el cliente se registra solo en Clerk):
 
 ```http
 POST /customers
@@ -271,7 +280,8 @@ Content-Type: application/json
 {
   "email": "ana@example.com",
   "name": "Ana",
-  "age": 30
+  "age": 30,
+  "dni": "87654321"
 }
 ```
 
@@ -295,7 +305,9 @@ GET /customers/by-dni/{dni}
 
 ### Entrenadores
 
-Crear entrenador:
+Crear entrenador (solo `admin`). `dni` es opcional (8 digitos): si viene, se vincula al correo en la misma transaccion, y un DNI
+que ya pertenece a otro correo da 409 sin crear nada. Tras crear el entrenador se le invita en Clerk con el rol `entrenador`
+(o, si ese correo ya tiene cuenta, se le asigna el rol). El entrenador se crea aunque la invitacion falle o se omita:
 
 ```http
 POST /trainers
@@ -305,8 +317,29 @@ Content-Type: application/json
   "email": "coach@example.com",
   "name": "Coach",
   "age": 35,
-  "specialty": "Strength"
+  "specialty": "Strength",
+  "dni": "12345678"
 }
+```
+
+```json
+{ "success": true,
+  "data": { "email": "coach@example.com", "name": "Coach", "age": 35, "specialty": "Strength", "dni": "12345678",
+            "invitation": { "status": "INVITED", "message": "invitation_sent" } } }
+```
+
+`invitation.status` es `INVITED`, `ROLE_UPDATED` (el correo ya tenia cuenta y se le asigno el rol; nunca se degrada a un admin),
+`SKIPPED` (`clerk_not_configured`) o `FAILED` (`clerk_unreachable`, `clerk_error_<http>`, `clerk_user_not_found`,
+`clerk_existing_admin`). `message` es un codigo estable, no un texto para mostrar.
+
+Reintentar la invitacion de un entrenador existente (solo `admin`; siempre 200 si el entrenador existe, revisar `status`):
+
+```http
+POST /trainers/{email}/invite
+```
+
+```json
+{ "success": true, "data": { "status": "FAILED", "message": "clerk_error_500" } }
 ```
 
 Listar entrenadores (cualquier usuario autenticado; los clientes lo usan para reservar; ordenados por nombre; devuelve `email`, `name`, `age`, `specialty`):

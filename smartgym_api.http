@@ -29,7 +29,8 @@ Content-Type: application/json
 {
   "email": "alice@example.com",
   "name": "Alice Runner",
-  "age": 29
+  "age": 29,
+  "dni": "11223344"
 }
 
 ###
@@ -45,7 +46,8 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Crear Trainer (solo admin)
+# Crear Trainer (solo admin). dni es opcional (8 dígitos). Invita al correo en Clerk con el rol "entrenador"
+# si el backend tiene CLERK_SECRET_KEY; la respuesta trae invitation.status (INVITED, ROLE_UPDATED, SKIPPED, FAILED).
 POST {{host}}/api/v1/trainers
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -54,8 +56,14 @@ Content-Type: application/json
   "email": "coach.bob@example.com",
   "name": "Bob Coach",
   "age": 40,
-  "specialty": "strength"
+  "specialty": "strength",
+  "dni": "22334455"
 }
+
+###
+# Reintentar la invitación de Clerk de un entrenador existente (solo admin)
+POST {{host}}/api/v1/trainers/coach.bob@example.com/invite
+Authorization: Bearer {{token}}
 
 ###
 # Listar Trainers (cualquier usuario autenticado)

@@ -417,7 +417,8 @@ class AccessMatrixTest {
         data = JsonPath.read(call("POST", "/api/v1/trainers",
                 "{\"email\":\"nuevo.t@x.com\",\"name\":\"Nuevo T\",\"age\":30,\"specialty\":\"Yoga\"}", "ADMIN")
                 .getResponse().getContentAsString(), "$.data");
-        assertEquals(java.util.Set.of("email", "name", "age", "specialty"), data.keySet());
+        // El alta añade el DNI (opcional) y el resultado de la invitación en Clerk; nunca datos sensibles.
+        assertEquals(java.util.Set.of("email", "name", "age", "specialty", "dni", "invitation"), data.keySet());
     }
 
     // =============================== el 403 no filtra existencia ===============================

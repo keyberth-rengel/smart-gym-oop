@@ -41,6 +41,12 @@ springdoc:
 clerk:
   # Instancia de Clerk que emite los session tokens (JWT). Se puede sobreescribir con CLERK_ISSUER.
   issuer: https://brave-sawfish-4330.clerk.accounts.dev
+  # Clave secreta de la API de backend de Clerk (solo para invitar entrenadores). NUNCA en el repo: variable de entorno CLERK_SECRET_KEY.
+  # Vacía = las invitaciones se omiten (el alta del entrenador funciona igual; invitation.status = SKIPPED).
+  secret-key: ${CLERK_SECRET_KEY:}
+  api-base: https://api.clerk.com
+  # A donde llega el entrenador al aceptar la invitación. Se puede sobreescribir con CLERK_INVITATION_REDIRECT_URL.
+  invitation-redirect-url: ${CLERK_INVITATION_REDIRECT_URL:http://localhost:4200/auth/sign-up}
 
 smartgym:
   cors:

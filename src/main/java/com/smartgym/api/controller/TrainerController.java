@@ -1,8 +1,13 @@
 package com.smartgym.api.controller;
 
 import com.smartgym.api.common.ApiResponse;
+import com.smartgym.api.dto.TrainerCreateRequest;
+import com.smartgym.api.dto.TrainerCreatedResponse;
 import com.smartgym.api.dto.TrainerCustomerItem;
 import com.smartgym.api.dto.TrainerDto;
+import com.smartgym.application.RegistrationService;
+import com.smartgym.clerk.ClerkClient;
+import com.smartgym.clerk.InvitationResult;
 import java.util.List;
 import com.smartgym.model.Trainer;
 import com.smartgym.security.AccessGuard;
@@ -23,35 +28,63 @@ import jakarta.servlet.http.HttpServletRequest;
 @Validated
 public class TrainerController {
 
+    private static final String TRAINER_ROLE = "entrenador";
+
     private final SmartGymService service;
     private final AccessGuard access;
+    private final RegistrationService registration;
+    private final ClerkClient clerk;
 
-    public TrainerController(SmartGymService service, AccessGuard access) {
+    public TrainerController(SmartGymService service, AccessGuard access,
+                             RegistrationService registration, ClerkClient clerk) {
         this.service = service;
         this.access = access;
+        this.registration = registration;
+        this.clerk = clerk;
     }
 
-    @Operation(summary = "Create trainer (admin only)")
+    @Operation(summary = "Create trainer (admin only) and invite them through Clerk",
+            description = "Creates the trainer (and links the optional DNI) in one transaction, then invites the email in Clerk with the "
+                    + "'entrenador' role. The trainer is created even if the invitation fails or Clerk is not configured; "
+                    + "check 'invitation.status' (INVITED, ROLE_UPDATED, SKIPPED, FAILED).")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "409", description = "Trainer already exists",
+            responseCode = "409", description = "Trainer already exists or DNI linked to another email",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody TrainerDto dto,
+    public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody TrainerCreateRequest dto,
                                                  jakarta.servlet.http.HttpServletRequest req) {
         access.requireAdmin();
-        if (service.findTrainer(dto.email()).isPresent()) {
-            throw new IllegalStateException("Trainer already exists: " + dto.email());
-        }
         var created = new Trainer(dto.email(), dto.name(), dto.age(), dto.specialty());
-        service.addTrainer(created);
+        registration.registerTrainer(created, dto.dni());
+        // La invitación va DESPUÉS de confirmar la transacción de alta y nunca la deshace.
+        InvitationResult invitation = clerk.invite(created.getEmail(), TRAINER_ROLE);
+        var body = new TrainerCreatedResponse(created.getEmail(), created.getName(), created.getAge(),
+                created.getSpecialty(), dto.dni(), invitation);
         return org.springframework.http.ResponseEntity.status(201).body(
-                com.smartgym.api.common.ApiResponse.ok(
-                        new TrainerDto(created.getEmail(), created.getName(), created.getAge(), created.getSpecialty()),
-                        "Trainer created successfully", java.time.Instant.now().toString(), req.getRequestURI()
-                )
+                com.smartgym.api.common.ApiResponse.ok(body, "Trainer created successfully",
+                        java.time.Instant.now().toString(), req.getRequestURI())
+        );
+    }
+
+    @Operation(summary = "Retry the Clerk invitation of an existing trainer (admin only)",
+            description = "Always 200 when the trainer exists; read 'status' (INVITED, ROLE_UPDATED, SKIPPED, FAILED) and 'message' (stable code).")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", description = "Invitation processed",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403", description = "Admin role required",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
+    @PostMapping("/{email}/invite")
+    public ResponseEntity<ApiResponse<?>> invite(@PathVariable String email, HttpServletRequest req) {
+        access.requireAdmin();
+        var trainer = service.findTrainer(email)
+                .orElseThrow(() -> new IllegalArgumentException("Trainer not found: " + email));
+        InvitationResult result = clerk.invite(trainer.getEmail(), TRAINER_ROLE);
+        return ResponseEntity.ok(
+                ApiResponse.ok(result, "Invitation processed", java.time.Instant.now().toString(), req.getRequestURI())
         );
     }
 
