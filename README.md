@@ -188,6 +188,8 @@ El seed `src/main/resources/data.sql` crea datos base para desarrollo y pruebas 
 
 - Entrenador: `mike@smartgym.com`
 - Cliente: `alice@example.com`
+
+`spring.jpa.defer-datasource-initialization=true` hace que `data.sql` corra despues de que Hibernate cree el esquema, asi la app arranca igual con BD en archivo (por defecto) o en memoria (`--spring.datasource.url=jdbc:h2:mem:x`), sin necesidad de `--spring.sql.init.mode=never`.
 - DNI vinculado: `11111111 -> alice@example.com`
 
 Como la base es persistente, puedes borrar `data/smartgymdb.mv.db` si necesitas arrancar desde cero.
@@ -555,6 +557,7 @@ GET /routines/active/{dni}?day=monday
 ```
 
 Dias aceptados: `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday`.
+La rutina semanal cubre lunes a sabado: un dia sin bloque (el domingo) responde 200 con `{"day":"sunday","block":null}` (descanso), no un error.
 
 Consultar historial:
 

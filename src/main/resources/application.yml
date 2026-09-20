@@ -28,6 +28,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    # data.sql corre DESPUÉS de que Hibernate crea el esquema (con BD en memoria no existía aún y fallaba).
+    defer-datasource-initialization: true
 
   h2:
     console:

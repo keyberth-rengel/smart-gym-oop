@@ -213,6 +213,12 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
+# El domingo no tiene bloque: 200 con {"day":"sunday","block":null} (descanso)
+GET {{host}}/api/v1/routines/active/12345678?day=sunday
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
 # Asignar rutina semanal por correo del cliente (se envía dni O customer_email, nunca ambos)
 POST {{host}}/api/v1/routines/assign
 Authorization: Bearer {{token}}

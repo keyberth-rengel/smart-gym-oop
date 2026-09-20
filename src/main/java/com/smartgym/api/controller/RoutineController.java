@@ -140,7 +140,10 @@ public class RoutineController {
     private ResponseEntity<ApiResponse<Map<String, String>>> activeResponse(String email, DayOfWeek d, HttpServletRequest http) {
         var active = ext.activeRoutine(email).orElseThrow(() -> new IllegalArgumentException("No active routine"));
         String block = active.getFor(d);
-        var payload = java.util.Map.of("day", d.name().toLowerCase(), "block", block);
+        // Map.of no admite null: un día sin bloque (p. ej. domingo) responde block:null en vez de 500.
+        var payload = new java.util.LinkedHashMap<String, String>();
+        payload.put("day", d.name().toLowerCase());
+        payload.put("block", block);
         return ResponseEntity.ok(
                 ApiResponse.ok(payload, "Active routine block retrieved successfully",
                         java.time.Instant.now().toString(), http.getRequestURI())
