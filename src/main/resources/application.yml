@@ -31,6 +31,12 @@ spring:
     # data.sql corre DESPUÉS de que Hibernate crea el esquema (con BD en memoria no existía aún y fallaba).
     defer-datasource-initialization: true
 
+  sql:
+    init:
+      # Por defecto Spring Boot solo corre data.sql si detecta una BD "embedded" en memoria (jdbc:h2:mem:).
+      # Esta app usa H2 en modo archivo (persistente), así que sin esto data.sql nunca se ejecutaba.
+      mode: always
+
   h2:
     console:
       enabled: true

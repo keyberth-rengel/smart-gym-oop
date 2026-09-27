@@ -12,18 +12,106 @@ set -o pipefail
 
 BASE="http://localhost:8080/api/v1"
 
-# La API exige un JWT de Clerk (excepto /health). Exporta TOKEN para enviarlo en todas las llamadas:
-#   TOKEN="<jwt>" ./smartgym_api_smoketest.sh
-# Nota: el session token de Clerk dura ~60 s; esta suite es larga, así que sin un token
-# de larga duración las últimas pruebas fallarán con 401.
-if [[ -n "${TOKEN:-}" ]]; then
-  curl() { command curl -H "Authorization: Bearer $TOKEN" "$@"; }
-fi
 JQ_EXISTS=$(command -v jq || true)
 USE_JQ=true
 if [[ -z "$JQ_EXISTS" ]]; then
   USE_JQ=false
   echo "Warning: jq not found. Output will be raw JSON."
+fi
+
+# La API exige un JWT de Clerk (excepto /health). Dos formas de autenticar la suite:
+#
+# 1) Automática (recomendada): exporta CLERK_SECRET_KEY y esta suite mintea un JWT de
+#    admin fresco antes de cada llamada, usando la cuenta de prueba admin@smartgym.com
+#    (ver README -> Cuentas de prueba). El session token de Clerk dura ~60 s; refrescarlo
+#    por request evita que las pruebas del final fallen con 401 por expiración.
+#      CLERK_SECRET_KEY="sk_test_..." ./smartgym_api_smoketest.sh
+#    Opcional: ADMIN_EMAIL="otro-admin@..." para usar otra cuenta admin.
+#
+# 2) Manual: exporta un TOKEN fijo (se reusa tal cual, puede expirar a mitad de la suite):
+#      TOKEN="<jwt>" ./smartgym_api_smoketest.sh
+json_field() {
+  # Extrae un campo string plano "campo":"valor" sin depender de jq.
+  local json="$1" field="$2"
+  echo "$json" | sed -n "s/.*\"$field\":\"\([^\"]*\)\".*/\1/p" | head -n1
+}
+
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@smartgym.com}"
+TOKEN="${TOKEN:-}"
+TOKEN_ISSUED_AT=0
+SESSION_ID=""
+ADMIN_USER_ID=""
+
+clerk_api_post() {
+  local path="$1"
+  local data="${2:-}"
+  if [[ -z "$data" ]]; then data='{}'; fi
+  command curl -sS -X POST "https://api.clerk.com$path" -H "Authorization: Bearer $CLERK_SECRET_KEY" -H "Content-Type: application/json" -d "$data"
+}
+
+resolve_admin_user_id() {
+  local resp
+  resp=$(command curl -sS -G "https://api.clerk.com/v1/users" \
+    -H "Authorization: Bearer $CLERK_SECRET_KEY" \
+    --data-urlencode "email_address[]=$ADMIN_EMAIL")
+  if $USE_JQ; then
+    ADMIN_USER_ID=$(echo "$resp" | jq -r '.[0].id // empty')
+  else
+    ADMIN_USER_ID=$(json_field "$resp" "id")
+  fi
+  if [[ -z "$ADMIN_USER_ID" ]]; then
+    echo "ERROR: no se encontró un usuario de Clerk con email $ADMIN_EMAIL. Revisa ADMIN_EMAIL o crea la cuenta." >&2
+    exit 1
+  fi
+}
+
+ensure_session() {
+  if [[ -z "$SESSION_ID" ]]; then
+    [[ -z "$ADMIN_USER_ID" ]] && resolve_admin_user_id
+    local resp
+    resp=$(clerk_api_post "/v1/sessions" "{\"user_id\":\"$ADMIN_USER_ID\"}")
+    if $USE_JQ; then
+      SESSION_ID=$(echo "$resp" | jq -r '.id // empty')
+    else
+      SESSION_ID=$(json_field "$resp" "id")
+    fi
+    if [[ -z "$SESSION_ID" ]]; then
+      echo "ERROR: no se pudo crear una sesión de Clerk para $ADMIN_EMAIL. Respuesta: $resp" >&2
+      exit 1
+    fi
+  fi
+}
+
+refresh_token() {
+  local now
+  now=$(date +%s)
+  if (( now - TOKEN_ISSUED_AT < 30 )) && [[ -n "$TOKEN" ]]; then
+    return
+  fi
+  ensure_session
+  local resp
+  resp=$(clerk_api_post "/v1/sessions/$SESSION_ID/tokens")
+  if $USE_JQ; then
+    TOKEN=$(echo "$resp" | jq -r '.jwt // empty')
+  else
+    TOKEN=$(json_field "$resp" "jwt")
+  fi
+  if [[ -z "$TOKEN" ]]; then
+    echo "ERROR: no se pudo mintear un JWT para $ADMIN_EMAIL. Respuesta: $resp" >&2
+    exit 1
+  fi
+  TOKEN_ISSUED_AT=$now
+}
+
+if [[ -n "${CLERK_SECRET_KEY:-}" ]]; then
+  echo "[AUTH] Usando CLERK_SECRET_KEY: se minteará un JWT de $ADMIN_EMAIL antes de cada request."
+  refresh_token
+  curl() { refresh_token; command curl -H "Authorization: Bearer $TOKEN" "$@"; }
+elif [[ -n "$TOKEN" ]]; then
+  echo "[AUTH] Usando TOKEN fijo (puede expirar antes de terminar la suite)."
+  curl() { command curl -H "Authorization: Bearer $TOKEN" "$@"; }
+else
+  echo "[AUTH] Sin CLERK_SECRET_KEY ni TOKEN: todas las llamadas a /api/v1/** (salvo /health) darán 401."
 fi
 
 # Códigos esperados por prueba (separados por '|').
@@ -33,22 +121,22 @@ get_expect() {
     1) echo "400" ;;
     2) echo "400" ;;
     3) echo "400" ;;
-    4) echo "201|409" ;;
+    4) echo "201|400|409" ;;             # 400 si el payload también rompe el formato de email (validación antes que persistencia)
     5) echo "201|400" ;;
     6) echo "400|409" ;;
     7a) echo "409" ;;
     7b) echo "409" ;;
     8a) echo "400" ;;
     8b) echo "400" ;;
-    9) echo "422" ;;
-    10) echo "400|422" ;;
+    9) echo "404" ;;                     # DNI not linked -> unificado a 404 (B9)
+    10) echo "400|404" ;;
     11) echo "400" ;;
     12) echo "422" ;;
     13) echo "400|422" ;;
     14) echo "400|422" ;;                # Bean validation or domain range
     15) echo "400|422" ;;
     16) echo "422" ;;
-    17) echo "422" ;;
+    17) echo "404" ;;                    # Booking inexistente -> unificado a 404 (B9)
     18) echo "MIX:201+409" ;;
     19) echo "201" ;;
     20) echo "200" ;;
@@ -58,7 +146,7 @@ get_expect() {
     24) echo "415" ;;
     25a) echo "201" ;;
     25b) echo "204" ;;               # DELETE now returns 204 No Content
-    25c) echo "422" ;;
+    25c) echo "404" ;;                   # Booking ya eliminado -> unificado a 404 (B9)
     26) echo "201|400" ;;
     27) echo "201" ;;              # Unique trainer creation (positive)
     28) echo "200" ;;              # Access with linked DNI (positive)
@@ -239,12 +327,12 @@ if $USE_JQ; then
   R=$(curl_raw POST "$BASE/trainers" "$(jq -nc --arg e "$INJ@example.com" --arg n "$INJ" --argjson age 40 '{email:$e,name:$n,age:$age,specialty:"Strength"}')") || true
 else
   R=$(curl_raw POST "$BASE/trainers" "{\"email\":\"${INJ}@example.com\",\"name\":\"${INJ}\",\"age\":40,\"specialty\":\"Strength\"}") || true
-
-# 5) Payload extremadamente grande
+fi
+print_resp "$R"
 STATUS=$(echo "$R" | tail -n1 | awk '{print $2}')
 assert_status 4 "$STATUS"
-fi
-# (block 4 ends)
+
+# 5) Payload extremadamente grande
 echo "[5] Extremely large payload -> POST /customers"
 if $USE_JQ; then
   BIG_NAME=$(printf 'A%.0s' $(seq 1 20000))
@@ -545,7 +633,7 @@ if [ $PM -ge 60 ]; then
 fi
 # Iterar hasta encontrar minuto libre (evita SLOT_TIME, DEL_TIME y cualquier histórico)
 while true; do
-  CAND="$(printf '%02d' $PH):$(printf '%02d' $PM)"
+  CAND="$(printf '%02d' $((10#$PH))):$(printf '%02d' $((10#$PM)))"
   if [[ "$CAND" == "${SLOT_TIME:-}" || "$CAND" == "${DEL_TIME:-}" ]]; then
     PM=$(( PM + 1 ))
   elif echo "$USED_TIMES" | grep -qx "$CAND"; then
