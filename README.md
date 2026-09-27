@@ -186,19 +186,20 @@ Datos de conexion:
 
 El seed `src/main/resources/data.sql` crea datos base para desarrollo y pruebas manuales:
 
-- Entrenador: `mike@smartgym.com`
-- Cliente: `alice@example.com`
+- Entrenador: `mike+clerk_test@smartgym.com`
+- Cliente: `alice+clerk_test@example.com`
 
 ### Cuentas de prueba (Clerk)
 
 Para probar el login end-to-end (frontend + backend) por rol se crearon estas cuentas en la instancia de desarrollo
-de Clerk, reutilizando los correos ya sembrados arriba para entrenador y cliente:
+de Clerk, reutilizando los correos ya sembrados arriba para entrenador y cliente. Los tres usan el sufijo
+`+clerk_test`, que acepta siempre el código de verificación **`424242`** al iniciar sesión desde un navegador nuevo:
 
 | Rol | Correo | Contraseña |
 |---|---|---|
-| Cliente | `alice@example.com` | `Smartgym2026Test!` |
-| Entrenador | `mike@smartgym.com` | `Smartgym2026Test!` |
-| Admin | `admin@smartgym.com` | `Smartgym2026Test!` |
+| Cliente | `alice+clerk_test@example.com` | `Smartgym2026Test!` |
+| Entrenador | `mike+clerk_test@smartgym.com` | `Smartgym2026Test!` |
+| Admin | `admin+clerk_test@smartgym.com` | `Smartgym2026Test!` |
 
 > Instancia de **desarrollo** de Clerk, no de producción. Antes de publicar este repo hay que rotar/eliminar estas
 > cuentas y regenerar `CLERK_SECRET_KEY` (compartida durante el desarrollo; ver `PLAN.md` del frontend → Pendiente).
@@ -677,7 +678,7 @@ CLERK_SECRET_KEY="sk_test_..." ./smartgym_api_smoketest.sh
 
 El smoke test requiere que la aplicacion este levantada en `http://localhost:8080` y, como la API exige JWT (salvo
 `/health`), un `CLERK_SECRET_KEY` para mintear un token de admin fresco antes de cada llamada (usa la cuenta
-`admin@smartgym.com` de la sección de cuentas de prueba; se puede cambiar con `ADMIN_EMAIL`). Alternativa manual:
+`admin+clerk_test@smartgym.com` de la sección de cuentas de prueba; se puede cambiar con `ADMIN_EMAIL`). Alternativa manual:
 `TOKEN="<jwt>"` con un JWT ya obtenido (puede expirar a mitad de la suite, ya que dura ~60 s). `jq` es opcional y
 solo mejora el formato de salida.
 

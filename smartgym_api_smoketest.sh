@@ -36,7 +36,7 @@ json_field() {
   echo "$json" | sed -n "s/.*\"$field\":\"\([^\"]*\)\".*/\1/p" | head -n1
 }
 
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@smartgym.com}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin+clerk_test@smartgym.com}"
 TOKEN="${TOKEN:-}"
 TOKEN_ISSUED_AT=0
 SESSION_ID=""
@@ -273,8 +273,8 @@ print_resp() {
 
 # Identidades base usadas en las pruebas
 TEST_EMAIL="badguy@example.com"
-TEST_EMAIL2="alice@example.com"
-TEST_TRAIN="mike@smartgym.com"
+TEST_EMAIL2="alice+clerk_test@example.com"
+TEST_TRAIN="mike+clerk_test@smartgym.com"
 TEST_DNI="99999998"   # likely unlinked
 GOOD_DNI="11111111"   # linked in normal tests
 
