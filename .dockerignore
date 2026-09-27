@@ -1,0 +1,10 @@
+target/
+.git/
+.idea/
+.vscode/
+*.log
+.DS_Store
+**/.DS_Store
+.playwright-mcp/
+docs/evidencias/
+data/
