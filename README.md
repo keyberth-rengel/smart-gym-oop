@@ -206,7 +206,7 @@ de Clerk, reutilizando los correos ya sembrados arriba para entrenador y cliente
 > cuentas y regenerar `CLERK_SECRET_KEY` (compartida durante el desarrollo; ver `PLAN.md` del frontend → Pendiente).
 
 `spring.jpa.defer-datasource-initialization=true` hace que `data.sql` corra despues de que Hibernate cree el esquema, asi la app arranca igual con BD en archivo (por defecto) o en memoria (`--spring.datasource.url=jdbc:h2:mem:x`), sin necesidad de `--spring.sql.init.mode=never`.
-- DNI vinculado: `11111111 -> alice@example.com`
+- DNIs vinculados: `11111111 -> alice+clerk_test@example.com` (cliente) y `44444444 -> mike+clerk_test@smartgym.com` (entrenador)
 
 Como la base es persistente, puedes borrar `data/smartgymdb.mv.db` si necesitas arrancar desde cero.
 

@@ -7,7 +7,7 @@
 
 -- Limpiar baseline (safe: si no existen, DELETE no falla en H2)
 DELETE FROM bookings; -- opcional: evitar colisiones horarias residuales
-DELETE FROM identity_links WHERE dni = '11111111';
+DELETE FROM identity_links WHERE dni IN ('11111111', '44444444');
 DELETE FROM customers WHERE email = 'alice+clerk_test@example.com';
 DELETE FROM trainers WHERE email = 'mike+clerk_test@smartgym.com';
 
@@ -22,5 +22,9 @@ VALUES ('alice+clerk_test@example.com', 'Alice', 28, NULL);
 -- Identity link baseline (GOOD_DNI -> alice+clerk_test@example.com)
 INSERT INTO identity_links (dni, email)
 VALUES ('11111111', 'alice+clerk_test@example.com');
+
+-- Identity link del entrenador baseline (permite probar su asistencia: 44444444 -> mike+clerk_test@smartgym.com)
+INSERT INTO identity_links (dni, email)
+VALUES ('44444444', 'mike+clerk_test@smartgym.com');
 
 -- Fin de seed
