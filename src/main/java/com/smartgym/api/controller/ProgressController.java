@@ -28,7 +28,8 @@ public class ProgressController {
     }
 
     @Operation(summary = "Add progress for customer by DNI (today's date)",
-            description = "Customer: only their own DNI. Admin: any. Trainer: 403.")
+            description = "Customer: only their own DNI. Admin: any. Trainer: 403. "
+                    + "Optional `date` (yyyy-MM-dd, client-local) must be within one day of the server's UTC date; defaults to the server's date. With `utcOffsetMinutes` the date must be the client's local today.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -40,7 +41,15 @@ public class ProgressController {
                                               jakarta.servlet.http.HttpServletRequest http) {
         access.requireCustomerWriteByDni(req.getDni());
         validateRanges(req);
-        ext.addProgressByDni(req.getDni(), req.getWeightKg(), req.getBodyFatPct(), req.getMusclePct());
+        java.time.LocalDate date = null;
+        if (req.getDate() != null && !req.getDate().isBlank()) {
+            try {
+                date = java.time.LocalDate.parse(req.getDate());
+            } catch (java.time.format.DateTimeParseException ex) {
+                throw new IllegalArgumentException("Date must be a valid calendar date (yyyy-MM-dd).");
+            }
+        }
+        ext.addProgressByDni(req.getDni(), req.getWeightKg(), req.getBodyFatPct(), req.getMusclePct(), date, req.getUtcOffsetMinutes());
         var list = ext.progressByDni(req.getDni());
         var last = list.isEmpty() ? null : list.get(list.size() - 1);
 

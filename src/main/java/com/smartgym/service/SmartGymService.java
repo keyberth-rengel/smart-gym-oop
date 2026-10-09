@@ -98,10 +98,15 @@ public class SmartGymService {
 
     @Transactional
     public Booking createBooking(String customerEmail, String trainerEmail, LocalDate date, LocalTime time, String note) {
+        return createBooking(customerEmail, trainerEmail, date, time, note, true);
+    }
+
+    private Booking createBooking(String customerEmail, String trainerEmail, LocalDate date, LocalTime time,
+                                  String note, boolean strictPastCheck) {
         if (customerEmail == null || trainerEmail == null || date == null || time == null) {
             throw new IllegalArgumentException("Incomplete data to create a booking.");
         }
-        if (date.atTime(time).isBefore(java.time.LocalDateTime.now())) {
+        if (strictPastCheck && date.atTime(time).isBefore(java.time.LocalDateTime.now())) {
             throw new IllegalArgumentException("Bookings in the past are not allowed.");
         }
 
@@ -126,6 +131,45 @@ public class SmartGymService {
         customer.addHistory("Booked with " + trainer.getEmail() + " at " + schedule);
         customerRepository.save(customer); // guardar historial actualizado
         return saved;
+    }
+
+    /**
+     * Reserva con fecha enviada por el cliente (zona horaria local del cliente). El servidor corre en UTC:
+     * la fecha debe estar a +-1 dia de la fecha UTC del servidor y la comprobacion de "pasado" es tolerante
+     * (la zona mas atrasada, UTC-12, aun puede estar en esa hora de pared).
+     */
+    @Transactional
+    public Booking createBookingForClientDate(String customerEmail, String trainerEmail, LocalDate date,
+                                              LocalTime time, String note, Integer utcOffsetMinutes) {
+        if (date == null || time == null) {
+            throw new IllegalArgumentException("Incomplete data to create a booking.");
+        }
+        if (utcOffsetMinutes != null) {
+            java.time.LocalDateTime clientNow = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).plusMinutes(utcOffsetMinutes);
+            requireClientToday(date, clientNow);
+            if (date.atTime(time).isBefore(clientNow)) {
+                throw new IllegalArgumentException("Bookings in the past are not allowed.");
+            }
+            return createBooking(customerEmail, trainerEmail, date, time, note, false);
+        }
+        requireWithinOneDayOfUtcToday(date);
+        if (date.atTime(time).isBefore(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).minusHours(12))) {
+            throw new IllegalArgumentException("Bookings in the past are not allowed.");
+        }
+        return createBooking(customerEmail, trainerEmail, date, time, note, false);
+    }
+
+    public static void requireClientToday(LocalDate date, java.time.LocalDateTime clientNow) {
+        if (!date.equals(clientNow.toLocalDate())) {
+            throw new IllegalArgumentException("Date must be today in the client's time zone.");
+        }
+    }
+
+    public static void requireWithinOneDayOfUtcToday(LocalDate date) {
+        LocalDate utcToday = LocalDate.now(java.time.ZoneOffset.UTC);
+        if (date.isBefore(utcToday.minusDays(1)) || date.isAfter(utcToday.plusDays(1))) {
+            throw new IllegalArgumentException("Date must be today (within one day of the server's UTC date).");
+        }
     }
 
     // Nuevas sobrecargas que fijan la fecha a hoy

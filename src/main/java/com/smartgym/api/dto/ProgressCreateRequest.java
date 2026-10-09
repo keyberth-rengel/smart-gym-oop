@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.DecimalMax;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 // POJO estándar en lugar de record para evitar posibles problemas de nombres en Jackson.
@@ -31,6 +32,20 @@ public class ProgressCreateRequest {
         @JsonProperty("musclePct")
         private Double musclePct;
 
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Optional client-local calendar date (yyyy-MM-dd). Must be within one day of the server's UTC date.",
+                example = "2026-10-08", nullable = true)
+        @jakarta.validation.constraints.Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "Date must be yyyy-MM-dd")
+        @JsonProperty("date")
+        private String date;
+
+        @io.swagger.v3.oas.annotations.media.Schema(description = "Optional client UTC offset in minutes (e.g. Lima = -300). With `date`, enforces the client's local today.",
+                example = "-300", nullable = true)
+        @jakarta.validation.constraints.Min(value = -720, message = "utcOffsetMinutes must be between -720 and 840")
+        @jakarta.validation.constraints.Max(value = 840, message = "utcOffsetMinutes must be between -720 and 840")
+        @JsonProperty("utcOffsetMinutes")
+        @JsonAlias({"utc_offset_minutes"})
+        private Integer utcOffsetMinutes;
+
         public ProgressCreateRequest() {}
 
         public ProgressCreateRequest(String dni, Double weightKg, Double bodyFatPct, Double musclePct) {
@@ -45,6 +60,10 @@ public class ProgressCreateRequest {
         public Double getBodyFatPct() { return bodyFatPct; }
         public Double getMusclePct() { return musclePct; }
 
+        public String getDate() { return date; }
+        public void setDate(String date) { this.date = date; }
+        public Integer getUtcOffsetMinutes() { return utcOffsetMinutes; }
+        public void setUtcOffsetMinutes(Integer v) { this.utcOffsetMinutes = v; }
         public void setDni(String dni) { this.dni = dni; }
         public void setWeightKg(Double weightKg) { this.weightKg = weightKg; }
         public void setBodyFatPct(Double bodyFatPct) { this.bodyFatPct = bodyFatPct; }

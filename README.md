@@ -91,6 +91,7 @@ No maneja usuarios ni contraseñas; el login y el registro los hace Clerk desde 
 ```
 
 - **Errores:** 401 (`UNAUTHORIZED`, sin token o inválido) y 403 (`FORBIDDEN`) usan el mismo formato `ApiResponse`. Un token sin `email` produce 403 con el mensaje `The token does not include the email; configure the session token in Clerk`.
+- **Zona horaria:** el servidor corre en UTC (`-Duser.timezone=UTC` en el Dockerfile). `POST /bookings` y `POST /progress` aceptan un `date` opcional (`yyyy-MM-dd`, fecha local del cliente) que debe estar a +-1 dia de la fecha UTC del servidor; sin `date` se usa la fecha del servidor. Si ademas se envia `utcOffsetMinutes` (-720..840, p. ej. Lima = -300), `date` debe ser el "hoy" local del cliente y las horas pasadas se rechazan de forma estricta; sin el offset se mantiene la tolerancia (+-1 dia, -12 h).
 - **CORS:** orígenes permitidos en `smartgym.cors.allowed-origins` (por defecto `http://localhost:4200`), métodos GET/POST/PUT/DELETE/OPTIONS, sin cookies.
 
 Propiedades (se sobreescriben con variables de entorno):

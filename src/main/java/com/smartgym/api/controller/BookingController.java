@@ -40,7 +40,10 @@ public class BookingController {
     }
 
     @Operation(summary = "Create a booking",
-            description = "Customer: only for their own email. Admin: any customer. Trainer: 403.")
+            description = "Customer: only for their own email. Admin: any customer. Trainer: 403. "
+                    + "Without `date` the server uses its own (UTC) date. A client may send its local `date` (yyyy-MM-dd); "
+                    + "it must be within one day of the server's UTC date, and past times are checked leniently across time zones. "
+                    + "If `utcOffsetMinutes` is also sent (-720..840), the date must be the client's local today and past times are rejected strictly.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201", description = "Created",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class)))
@@ -54,9 +57,21 @@ public class BookingController {
     public ResponseEntity<ApiResponse<?>> create(@Valid @RequestBody BookingCreateRequest req, HttpServletRequest http) {
         access.requireBookingFor(req.customerEmail());
                 var time = LocalTime.parse(req.time());
-        Booking b = (req.note() == null || req.note().isBlank())
-                ? service.createBookingToday(req.customerEmail(), req.trainerEmail(), time)
-                : service.createBookingToday(req.customerEmail(), req.trainerEmail(), time, req.note());
+        Booking b;
+        if (req.date() != null && !req.date().isBlank()) {
+            LocalDate clientDate;
+            try {
+                clientDate = LocalDate.parse(req.date());
+            } catch (java.time.format.DateTimeParseException ex) {
+                throw new IllegalArgumentException("Date must be a valid calendar date (yyyy-MM-dd).");
+            }
+            String note = (req.note() == null || req.note().isBlank()) ? null : req.note();
+            b = service.createBookingForClientDate(req.customerEmail(), req.trainerEmail(), clientDate, time, note, req.utcOffsetMinutes());
+        } else {
+            b = (req.note() == null || req.note().isBlank())
+                    ? service.createBookingToday(req.customerEmail(), req.trainerEmail(), time)
+                    : service.createBookingToday(req.customerEmail(), req.trainerEmail(), time, req.note());
+        }
 
         var resp = new BookingResponse(
                 b.getId(),

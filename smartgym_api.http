@@ -106,7 +106,7 @@ Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
-# Crear Booking (fecha fijada por el servidor = hoy). Cliente: solo a su nombre; admin: cualquiera; entrenador: 403
+# Crear Booking (hoy; `date` opcional = fecha local del cliente, a +-1 dia de la fecha UTC del servidor). Cliente: solo a su nombre; admin: cualquiera; entrenador: 403
 # Ajusta la hora si ya existe una reserva para ese trainer
 POST {{host}}/api/v1/bookings
 Authorization: Bearer {{token}}
@@ -116,7 +116,9 @@ Content-Type: application/json
   "customerEmail": "alice@example.com",
   "trainerEmail": "coach.bob@example.com",
   "time": "10:30",
-  "note": "Primera sesión"
+  "note": "Primera sesión",
+  "date": "2026-10-08",
+  "utcOffsetMinutes": -300
 }
 
 ###
@@ -181,7 +183,9 @@ Content-Type: application/json
   "dni": "12345678",
   "weightKg": 70.4,
   "bodyFatPct": 18.2,
-  "musclePct": 42.0
+  "musclePct": 42.0,
+  "date": "2026-10-08",
+  "utcOffsetMinutes": -300
 }
 
 ###

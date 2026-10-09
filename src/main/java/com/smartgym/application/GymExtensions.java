@@ -129,10 +129,24 @@ public class GymExtensions {
 
     @Transactional
     public void addProgressByDni(String dni, double weightKg, double bodyFatPct, double musclePct) {
+        addProgressByDni(dni, weightKg, bodyFatPct, musclePct, null, null);
+    }
+
+    /** {@code date} opcional (fecha local del cliente); debe estar a +-1 dia de la fecha UTC del servidor. */
+    @Transactional
+    public void addProgressByDni(String dni, double weightKg, double bodyFatPct, double musclePct, LocalDate date, Integer utcOffsetMinutes) {
+        if (date != null) {
+            if (utcOffsetMinutes != null) {
+                com.smartgym.service.SmartGymService.requireClientToday(date,
+                        java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).plusMinutes(utcOffsetMinutes));
+            } else {
+                com.smartgym.service.SmartGymService.requireWithinOneDayOfUtcToday(date);
+            }
+        }
         String email = emailByDni(dni).orElseThrow(() -> new NotFoundException("DNI not linked"));
         var customer = core.findCustomer(email)
                 .orElseThrow(() -> new NotFoundException("Customer not found: " + email));
-        progressRepository.save(new ProgressRecord(customer, LocalDate.now(), weightKg, bodyFatPct, musclePct));
+        progressRepository.save(new ProgressRecord(customer, date != null ? date : LocalDate.now(), weightKg, bodyFatPct, musclePct));
     }
 
     @Transactional(readOnly = true)
